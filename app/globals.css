@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+@import "tailwindcss";
+
+/* 🌍 Root vars */
+:root {
+  --background: #020617;
+  --foreground: #ededed;
+}
+
+/* 📱 GLOBAL RESET */
+html,
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+}
+
+/* 🌌 MAIN BODY */
+body {
+  background: radial-gradient(circle at top, #0f172a, #020617 70%);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+
+/* 📱 iOS SAFE AREA SUPPORT */
+.safe-area {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 🎧 RESPONSIVE YOUTUBE EMBED */
+.responsive-yt {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* 16:9 */
+}
+
+.responsive-yt iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* 🌫️ Glass Scrollbar */
+.glass-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.4) transparent;
+}
+
+.glass-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.glass-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.glass-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(56, 189, 248, 0.6),
+    rgba(99, 102, 241, 0.6)
+  );
+  border-radius: 999px;
+}
+
+.glass-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(56, 189, 248, 0.9),
+    rgba(99, 102, 241, 0.9)
+  );
+}
+
+body {
+  background: radial-gradient(
+    circle at top,
+    #0f172a,
+    #020617 70%
+  );
+}
+/* 🌫️ Glass Scrollbar */
+.glass-scrollbar {
+  scrollbar-width: thin;               /* Firefox */
+  scrollbar-color: rgba(56,189,248,.4) transparent;
+}
+/* Chrome / Edge / Safari */
+.glass-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.glass-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.glass-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(56,189,248,0.6),
+    rgba(99,102,241,0.6)
+  );
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+}
+.glass-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(56,189,248,0.9),
+    rgba(99,102,241,0.9)
+  );
+}
+
+canvas {
+  filter: drop-shadow(0 0 24px rgba(56,189,248,0.25));
+}
