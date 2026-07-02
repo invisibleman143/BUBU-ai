@@ -117,7 +117,7 @@ export default function AmbientPlayer({ isOpen, onClose, style, className }: Amb
       initial={{ opacity: 0, scale: 0.95, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: 10 }}
-      className={`z-40 p-5 rounded-2xl bg-[#090d16]/95 border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl flex flex-col gap-4 text-white ${className || "absolute bottom-6 right-6 w-80"}`}
+      className={`z-40 p-5 rounded-2xl shadow-lg flex flex-col gap-4 text-white custom-glass-panel ${className || "absolute bottom-6 right-6 w-80"}`}
       style={style}
     >
       {/* Header */}

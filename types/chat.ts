@@ -3,6 +3,7 @@ import { Personality } from "./personality";
 export type ChatMessage = {
   role: "user" | "ai";
   text: string;
+  personality?: Personality; // locked personality mode at message time
 };
 
 export type Chat = {

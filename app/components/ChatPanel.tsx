@@ -35,33 +35,33 @@ const bubbleThemeStyles: Record<
   { user: string; ai: string; emoji: string }
 > = {
   normal: {
-    user: "bg-cyan-500/10 border-cyan-400/25 shadow-[0_4px_16px_rgba(6,182,212,0.12)] text-cyan-100",
-    ai: "bg-fuchsia-500/15 border-fuchsia-400/25 shadow-[0_4px_16px_rgba(217,70,239,0.12)] text-fuchsia-100",
+    user: "bg-gradient-to-br from-cyan-500/10 to-blue-500/5 border-cyan-400/30 shadow-[0_4px_16px_rgba(34,211,238,0.1)] text-cyan-100",
+    ai: "bg-gradient-to-br from-fuchsia-500/15 to-purple-500/5 border-fuchsia-400/30 shadow-[0_4px_16px_rgba(217,70,239,0.1)] text-fuchsia-100",
     emoji: "🙂",
   },
   romantic: {
-    user: "bg-pink-500/10 border-pink-400/25 shadow-[0_4px_16px_rgba(244,114,182,0.12)] text-pink-100",
-    ai: "bg-rose-500/15 border-rose-400/25 shadow-[0_4px_16px_rgba(244,63,94,0.12)] text-rose-100",
+    user: "bg-gradient-to-br from-pink-500/10 to-rose-500/5 border-pink-400/30 shadow-[0_4px_16px_rgba(244,114,182,0.1)] text-pink-100",
+    ai: "bg-gradient-to-br from-rose-500/15 to-purple-500/5 border-rose-400/30 shadow-[0_4px_20px_rgba(244,63,94,0.15)] text-rose-100",
     emoji: "💖",
   },
   caring: {
-    user: "bg-emerald-500/10 border-emerald-400/25 shadow-[0_4px_16px_rgba(16,185,129,0.12)] text-emerald-100",
-    ai: "bg-teal-500/15 border-teal-400/25 shadow-[0_4px_16px_rgba(20,184,166,0.12)] text-teal-100",
+    user: "bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border-emerald-400/30 shadow-[0_4px_16px_rgba(52,211,153,0.1)] text-emerald-100",
+    ai: "bg-gradient-to-br from-teal-500/15 to-cyan-500/5 border-teal-400/30 shadow-[0_4px_16px_rgba(20,184,166,0.1)] text-teal-100",
     emoji: "🥰",
   },
   playful: {
-    user: "bg-yellow-500/10 border-yellow-400/25 shadow-[0_4px_16px_rgba(234,179,8,0.12)] text-yellow-100",
-    ai: "bg-orange-500/15 border-orange-400/25 shadow-[0_4px_16px_rgba(249,115,22,0.12)] text-orange-100",
+    user: "bg-gradient-to-br from-yellow-500/10 to-amber-500/5 border-yellow-400/30 shadow-[0_4px_16px_rgba(250,204,21,0.1)] text-yellow-100",
+    ai: "bg-gradient-to-br from-orange-500/15 to-red-500/5 border-orange-400/30 shadow-[0_4px_16px_rgba(249,115,22,0.1)] text-orange-100",
     emoji: "😜",
   },
   angry: {
-    user: "bg-red-500/10 border-red-400/25 shadow-[0_4px_16px_rgba(239,68,68,0.12)] text-red-100",
-    ai: "bg-rose-600/15 border-rose-500/25 shadow-[0_4px_16px_rgba(239,68,68,0.12)] text-rose-100",
+    user: "bg-gradient-to-br from-red-500/10 to-rose-500/5 border-red-400/30 shadow-[0_4px_16px_rgba(248,113,113,0.1)] text-red-100",
+    ai: "bg-gradient-to-br from-rose-600/15 to-red-600/5 border-rose-500/30 shadow-[0_4px_18px_rgba(248,113,113,0.12)] text-rose-100",
     emoji: "😡",
   },
   command: {
-    user: "bg-violet-500/10 border-violet-400/25 shadow-[0_4px_16px_rgba(139,92,246,0.12)] text-violet-100",
-    ai: "bg-indigo-500/15 border-indigo-400/25 shadow-[0_4px_16px_rgba(99,102,241,0.12)] text-indigo-100",
+    user: "bg-gradient-to-br from-violet-500/10 to-indigo-500/5 border-violet-400/30 shadow-[0_4px_16px_rgba(167,139,250,0.1)] text-violet-100",
+    ai: "bg-gradient-to-br from-indigo-500/15 to-purple-600/5 border-indigo-400/30 shadow-[0_4px_16px_rgba(99,102,241,0.1)] text-indigo-100",
     emoji: "🤖",
   },
 };
@@ -133,14 +133,15 @@ export default function ChatPanel({
         <AnimatePresence>
           {chatHistory.map((msg, i) => {
             const isUser = msg.role === "user";
-            const currentMood = bubbleThemeStyles[personality] || bubbleThemeStyles.normal;
+            const msgMood = msg.personality || personality;
+            const currentMood = bubbleThemeStyles[msgMood] || bubbleThemeStyles.normal;
             return (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 16, scale: 0.95 }}
+                initial={{ opacity: 0, y: 18, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 280, damping: 22 }}
                 className={`flex gap-2.5 items-end ${
                   isUser ? "flex-row-reverse justify-start" : "flex-row justify-start"
                 }`}
@@ -202,8 +203,8 @@ export default function ChatPanel({
             : ""
         }`}
       >
-        {/* Quick Launch Buttons (hidden on desktop/laptop, shown on mobile/tablet portrait) */}
-        <div className="flex lg:hidden gap-2 flex-shrink-0">
+        {/* Quick Launch Buttons (shown on all devices) */}
+        <div className="flex gap-2 flex-shrink-0">
           {/* 📞 Call BUBU Button */}
           <button
             onClick={() => setVoiceMode?.(true)}

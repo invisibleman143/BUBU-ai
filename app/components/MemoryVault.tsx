@@ -93,7 +93,7 @@ export default function MemoryVault({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, y: 20 }}
       transition={{ type: "spring", duration: 0.5 }}
-      className={`relative flex flex-col rounded-3xl bg-[#0b0f19]/90 border border-white/10 shadow-[0_16px_48px_rgba(0,0,0,0.8)] overflow-hidden ${
+      className={`relative flex flex-col rounded-3xl shadow-[0_16px_48px_rgba(0,0,0,0.8)] overflow-hidden custom-glass-panel ${
         style ? "w-full h-full" : "w-full max-w-2xl max-h-[85vh]"
       }`}
       style={style}
@@ -283,7 +283,7 @@ export default function MemoryVault({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/80 backdrop-blur-md"
+          className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
         />
         {content}
       </div>

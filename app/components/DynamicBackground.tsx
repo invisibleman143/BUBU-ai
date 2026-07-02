@@ -3,9 +3,12 @@ import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Personality } from "../../types/personality";
 
+type AIState = "idle" | "listening" | "thinking" | "speaking";
+
 interface DynamicBackgroundProps {
   isDark: boolean;
   personality: Personality;
+  state: AIState;
 }
 
 const personalityBlobColors: Record<Personality, { blob1: string; blob2: string; blob3: string }> = {
@@ -41,7 +44,7 @@ const personalityBlobColors: Record<Personality, { blob1: string; blob2: string;
   },
 };
 
-export default function DynamicBackground({ isDark, personality }: DynamicBackgroundProps) {
+export default function DynamicBackground({ isDark, personality, state }: DynamicBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: -1000, y: -1000 });
   const blobs = personalityBlobColors[personality] || personalityBlobColors.normal;
@@ -106,9 +109,12 @@ export default function DynamicBackground({ isDark, personality }: DynamicBackgr
       });
     }
 
+    let tick = 0;
+
     // Animation Loop
     const animate = () => {
       ctx.clearRect(0, 0, width, height);
+      tick++;
 
       // Color mapping for particles
       let pColor = "34, 211, 238"; // default cyan
@@ -120,8 +126,30 @@ export default function DynamicBackground({ isDark, personality }: DynamicBackgr
 
       particles.forEach((p) => {
         // Move particle
-        p.x += p.vx * p.speedScale;
-        p.y += p.vy * p.speedScale;
+        let currentVx = p.vx;
+        let currentVy = p.vy;
+
+        if (state === "listening") {
+          currentVy = p.vy * 1.8; // drift faster upwards
+        }
+
+        p.x += currentVx * p.speedScale;
+        p.y += currentVy * p.speedScale;
+
+        // Dynamic State-based transformations
+        if (state === "thinking") {
+          // Orbit/attract toward screen center
+          const dxCenter = width / 2 - p.x;
+          const dyCenter = height / 2 - p.y;
+          const distCenter = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter);
+          if (distCenter > 80) {
+            p.x += (dxCenter / distCenter) * 0.35;
+            p.y += (dyCenter / distCenter) * 0.35;
+          }
+        } else if (state === "speaking") {
+          // Horizontal wavy ripple
+          p.x += Math.sin(tick * 0.04 + p.y * 0.008) * 0.4;
+        }
 
         // Mouse gravity interaction
         const dx = p.x - mouseRef.current.x;
@@ -150,10 +178,18 @@ export default function DynamicBackground({ isDark, personality }: DynamicBackgr
         if (p.x < 0) p.x = width;
         if (p.x > width) p.x = 0;
 
+        // Determine particle radius based on state
+        let radius = p.size;
+        if (state === "listening") {
+          radius = p.size * (1.0 + Math.sin(tick * 0.08 + (p.x + p.y) * 0.01) * 0.45);
+        } else if (state === "thinking") {
+          radius = p.size * 0.85;
+        }
+
         // Draw particle
         ctx.fillStyle = `rgba(${pColor}, ${p.alpha})`;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, Math.max(0.2, radius), 0, Math.PI * 2);
         ctx.fill();
       });
 
@@ -168,7 +204,7 @@ export default function DynamicBackground({ isDark, personality }: DynamicBackgr
       window.removeEventListener("mouseleave", handleMouseLeave);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [personality, isDark]);
+  }, [personality, isDark, state]);
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">

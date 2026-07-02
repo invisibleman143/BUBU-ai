@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { Chat, ChatMessage } from "../types/chat";
 import { Personality, personalityThemeMap } from "../types/personality";
@@ -159,6 +159,15 @@ const widgetLabels: Record<string, string> = {
   customizerToggle: "🎨 HUD Editor Button",
 };
 
+const personalityRGB: Record<Personality, string> = {
+  normal: "34, 211, 238",
+  romantic: "244, 114, 182",
+  caring: "52, 211, 153",
+  playful: "250, 204, 21",
+  angry: "248, 113, 113",
+  command: "167, 139, 250",
+};
+
 export default function Page() {
   const { user, loading } = useAuth();
   const [state, setState] = useState<AIState>("idle");
@@ -270,6 +279,28 @@ export default function Page() {
     });
   };
 
+  const handleWidgetDoubleClick = (e: React.MouseEvent, widget: keyof HUDConfig) => {
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "BUTTON" ||
+      target.closest("button") ||
+      target.closest("input") ||
+      target.closest("textarea")
+    ) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    contextMenuOpenTimeRef.current = Date.now();
+    setContextMenu({
+      widget,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
+
   const handleBackgroundContextMenu = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       e.preventDefault();
@@ -336,19 +367,37 @@ export default function Page() {
     const dx = clientX - dragStartRef.current.clientX;
     const dy = clientY - dragStartRef.current.clientY;
 
-    // Convert pixel offset to percentage of window width/height
     const dxPercent = (dx / window.innerWidth) * 100;
     const dyPercent = (dy / window.innerHeight) * 100;
 
     let newX = Math.max(0, Math.min(98, dragStartRef.current.startX + dxPercent));
     let newY = Math.max(0, Math.min(95, dragStartRef.current.startY + dyPercent));
 
-    // Snap to grid (1% increments)
     newX = Math.round(newX);
     newY = Math.round(newY);
 
+    if (Math.abs(newX - 50) <= 1.5) {
+      newX = 50;
+    }
+    if (Math.abs(newY - 50) <= 1.5) {
+      newY = 50;
+    }
+
     const mobile = isMobileRef.current;
     const defaultConfig = mobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
+    const currentHUD = hudConfigRef.current;
+    for (const key of Object.keys(currentHUD)) {
+      if (key === currentActiveDrag) continue;
+      const cfg = currentHUD[key as keyof HUDConfig] || defaultConfig[key as keyof HUDConfig];
+      if (!cfg.visible) continue;
+
+      if (Math.abs(newX - cfg.x) <= 1.5) {
+        newX = cfg.x;
+      }
+      if (Math.abs(newY - cfg.y) <= 1.5) {
+        newY = cfg.y;
+      }
+    }
 
     setHudConfig((prev) => {
       const targetWidgetConfig = prev[currentActiveDrag as keyof HUDConfig] || defaultConfig[currentActiveDrag as keyof HUDConfig];
@@ -570,6 +619,40 @@ export default function Page() {
         return 0.25;
     }
   })();
+
+  const snapLines = useMemo(() => {
+    if (!activeDrag) return { x: null, y: null };
+    const currentDragCfg = hudConfig[activeDrag as keyof HUDConfig];
+    if (!currentDragCfg) return { x: null, y: null };
+
+    let snapX: number | null = null;
+    let snapY: number | null = null;
+
+    if (Math.abs(currentDragCfg.x - 50) <= 1.5) {
+      snapX = 50;
+    }
+    if (Math.abs(currentDragCfg.y - 50) <= 1.5) {
+      snapY = 50;
+    }
+
+    const defaultConfig = isMobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
+    for (const key of Object.keys(hudConfig)) {
+      if (key === activeDrag) continue;
+      const cfg = hudConfig[key as keyof HUDConfig] || defaultConfig[key as keyof HUDConfig];
+      if (!cfg.visible) continue;
+
+      if (Math.abs(currentDragCfg.x - cfg.x) <= 1.5) {
+        snapX = cfg.x;
+      }
+      if (Math.abs(currentDragCfg.y - cfg.y) <= 1.5) {
+        snapY = cfg.y;
+      }
+    }
+
+    return { x: snapX, y: snapY };
+  }, [activeDrag, hudConfig, isMobile]);
+
+  const isCustomizing = Object.keys(hudConfig).some(key => unlockedWidgets[key]);
 
   const prevIsMobileRef = useRef<boolean | null>(null);
 
@@ -859,7 +942,7 @@ export default function Page() {
     setChats((prev) =>
       prev.map((c) =>
         c.id === currentChatId
-          ? { ...c, messages: [...c.messages, { role: "ai", text: "" }] }
+          ? { ...c, messages: [...c.messages, { role: "ai", text: "", personality }] }
           : c
       )
     );
@@ -1033,7 +1116,7 @@ export default function Page() {
         c.id === currentChatId
           ? {
               ...c,
-              messages: [...c.messages, { role: "user", text }],
+              messages: [...c.messages, { role: "user", text, personality }],
               title: c.messages.length === 0 ? text.slice(0, 20) : c.title,
               memory: { ...(c.memory || {}), ...detected },
             }
@@ -1093,7 +1176,7 @@ export default function Page() {
           c.id === currentChatId
             ? {
                 ...c,
-                messages: [...c.messages, { role: "user", text }],
+                messages: [...c.messages, { role: "user", text, personality }],
                 title: c.messages.length === 0 ? text.slice(0, 20) : c.title,
                 memory: { ...(c.memory || {}), ...detected },
               }
@@ -1110,7 +1193,7 @@ export default function Page() {
     };
 
     recognitionRef.current = recognition;
-  }, [state, currentChatId]);
+  }, [state, currentChatId, personality, globalMemory]);
 
   const startListening = () => {
     if (!recognitionRef.current || isListeningRef.current) return;
@@ -1243,15 +1326,27 @@ export default function Page() {
       <style dangerouslySetInnerHTML={{ __html: `
         :root {
           --font-custom: "Outfit", system-ui, sans-serif;
-          --glass-bg: rgba(7, 11, 25, 0.55);
+          --accent-rgb: ${personalityRGB[personality] || "34, 211, 238"};
+          --glass-bg: rgba(10, 15, 30, 0.7);
           --glass-blur: 16px;
-          --glass-border: rgba(255, 255, 255, 0.06);
-          --canvas-glow: drop-shadow(0 0 24px rgba(34, 211, 238, 0.25));
+          --glass-border: rgba(${personalityRGB[personality] || "34, 211, 238"}, 0.12);
+          --canvas-glow: drop-shadow(0 0 24px rgba(${personalityRGB[personality] || "34, 211, 238"}, 0.25));
+          --accent-glow: rgba(${personalityRGB[personality] || "34, 211, 238"}, 0.3);
+        }
+
+        .custom-glass-panel {
+          background: rgba(10, 15, 30, 0.72) !important;
+          backdrop-filter: blur(16px) !important;
+          border: 1px solid rgba(${personalityRGB[personality] || "34, 211, 238"}, 0.15) !important;
+          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45), 
+                      inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+                      inset 0 0 12px 0 rgba(${personalityRGB[personality] || "34, 211, 238"}, 0.03) !important;
+          transition: border-color 0.5s ease, box-shadow 0.5s ease;
         }
       `}} />
 
       {/* 🌌 IMMERSIVE DYNAMIC AURORA GRID BACKGROUND */}
-      <DynamicBackground isDark={isDark} personality={personality} />
+      <DynamicBackground isDark={isDark} personality={personality} state={state} />
 
       {/* 🎧 VOICE MODE OVERLAY */}
       {voiceMode && (
@@ -1280,6 +1375,7 @@ export default function Page() {
           onMouseUp={endLongPress}
           onTouchEnd={endLongPress}
           onContextMenu={(e) => handleContextMenu(e, "header")}
+          onDoubleClick={(e) => handleWidgetDoubleClick(e, "header")}
           style={{
             position: "absolute",
             left: `${hudConfig.header.x}%`,
@@ -1298,8 +1394,6 @@ export default function Page() {
             isMobile={isMobile}
             setMobileSidebarOpen={setMobileSidebarOpen}
             personality={personality}
-            voiceMode={voiceMode}
-            setVoiceMode={triggerVoiceMode}
             isDark={isDark}
             ambientPlayerOpen={ambientPlayerOpen}
             setAmbientPlayerOpen={handleToggleAmbientPlayer}
@@ -1318,6 +1412,24 @@ export default function Page() {
         onTouchEnd={handleBackgroundTouchEnd}
         className="flex-1 relative overflow-hidden select-none"
       >
+        {/* Holographic grid guide overlay when customizing */}
+        {isCustomizing && (
+          <div className="absolute inset-0 z-0 pointer-events-none opacity-30 bg-[linear-gradient(to_right,rgba(34,211,238,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(34,211,238,0.06)_1px,transparent_1px)] bg-[size:4%_4%]" />
+        )}
+
+        {/* Holographic Snap Lines */}
+        {snapLines.x !== null && (
+          <div 
+            className="absolute top-0 bottom-0 border-l border-dashed border-cyan-400/60 z-[9980] pointer-events-none shadow-[0_0_8px_rgba(34,211,238,0.4)]"
+            style={{ left: `${snapLines.x}%` }}
+          />
+        )}
+        {snapLines.y !== null && (
+          <div 
+            className="absolute left-0 right-0 border-t border-dashed border-cyan-400/60 z-[9980] pointer-events-none shadow-[0_0_8px_rgba(34,211,238,0.4)]"
+            style={{ top: `${snapLines.y}%` }}
+          />
+        )}
         
         {/* 🧾 RESPONSIVE SIDEBAR COMPONENT (Globally handled drawer for mobile) */}
         {isMobile && (
@@ -1356,6 +1468,7 @@ export default function Page() {
               onMouseUp={endLongPress}
               onTouchEnd={endLongPress}
               onContextMenu={(e) => handleContextMenu(e, "sidebar")}
+              onDoubleClick={(e) => handleWidgetDoubleClick(e, "sidebar")}
               style={{
                 position: "absolute",
                 left: `${hudConfig.sidebar.x}%`,
@@ -1405,6 +1518,7 @@ export default function Page() {
               onMouseUp={endLongPress}
               onTouchEnd={endLongPress}
               onContextMenu={(e) => handleContextMenu(e, "chat")}
+              onDoubleClick={(e) => handleWidgetDoubleClick(e, "chat")}
               style={{
                 position: "absolute",
                 left: `${hudConfig.chat.x}%`,
@@ -1452,6 +1566,7 @@ export default function Page() {
               onMouseUp={endLongPress}
               onTouchEnd={endLongPress}
               onContextMenu={(e) => handleContextMenu(e, "visualizer")}
+              onDoubleClick={(e) => handleWidgetDoubleClick(e, "visualizer")}
               style={{
                 position: "absolute",
                 left: `${hudConfig.visualizer.x}%`,
@@ -1488,6 +1603,7 @@ export default function Page() {
               onMouseUp={endLongPress}
               onTouchEnd={endLongPress}
               onContextMenu={(e) => handleContextMenu(e, "todo")}
+              onDoubleClick={(e) => handleWidgetDoubleClick(e, "todo")}
               style={{
                 position: "absolute",
                 left: `${hudConfig.todo.x}%`,
@@ -1525,6 +1641,7 @@ export default function Page() {
               onMouseUp={endLongPress}
               onTouchEnd={endLongPress}
               onContextMenu={(e) => handleContextMenu(e, "songs")}
+              onDoubleClick={(e) => handleWidgetDoubleClick(e, "songs")}
               style={{
                 position: "absolute",
                 left: `${hudConfig.songs.x}%`,
@@ -1557,6 +1674,7 @@ export default function Page() {
               onMouseUp={endLongPress}
               onTouchEnd={endLongPress}
               onContextMenu={(e) => handleContextMenu(e, "memory")}
+              onDoubleClick={(e) => handleWidgetDoubleClick(e, "memory")}
               style={{
                 position: "absolute",
                 left: `${hudConfig.memory.x}%`,
@@ -1580,6 +1698,7 @@ export default function Page() {
                   localStorage.setItem("bubu_global_memory", JSON.stringify(updated));
                 }}
                 className="w-full h-full"
+                style={{ width: "100%", height: "100%" }}
               />
             </div>
           )}
@@ -1769,6 +1888,19 @@ export default function Page() {
                     onMouseDown={(e) => startDrag(e, widget)}
                     onTouchStart={(e) => startDrag(e, widget)}
                   >
+                    {/* Holographic readout when dragging */}
+                    {isDraggingThis && (
+                      <div className="absolute -top-8 left-0 bg-[#090d16]/95 border border-cyan-400 text-cyan-400 text-[8px] font-mono px-2 py-0.5 rounded shadow-[0_0_10px_rgba(34,211,238,0.4)] animate-pulse z-[100] whitespace-nowrap">
+                        X: {cfg.x}% | Y: {cfg.y}% | S: {Math.round(cfg.scale * 100)}%
+                      </div>
+                    )}
+
+                    {/* High-Tech Bracket Corners */}
+                    <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-cyan-400 pointer-events-none rounded-tl-[4px] opacity-75" />
+                    <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t-2 border-r-2 border-cyan-400 pointer-events-none rounded-tr-[4px] opacity-75" />
+                    <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-cyan-400 pointer-events-none rounded-bl-[4px] opacity-75" />
+                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-cyan-400 pointer-events-none rounded-br-[4px] opacity-75" />
+
                     {/* Hide Component Button (Eye icon) in top right */}
                     {!isButton && (
                       <button
@@ -1803,7 +1935,7 @@ export default function Page() {
 
                         {/* Contextual control panel inside overlay */}
                         <div 
-                          className="mt-2 bg-black/80 border border-white/10 p-1.5 rounded-xl flex items-center justify-between gap-2 opacity-60 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto"
+                          className="mt-2 bg-[#090d16]/95 border border-cyan-500/30 p-1.5 rounded-xl flex items-center justify-center gap-3 opacity-60 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto shadow-md"
                           onMouseDown={(e) => e.stopPropagation()} // Prevent drag on controls
                           onTouchStart={(e) => e.stopPropagation()}
                         >
@@ -1811,49 +1943,49 @@ export default function Page() {
                             onClick={() => {
                               setUnlockedWidgets((prev) => ({ ...prev, [widget]: false }));
                             }}
-                            className="py-0.5 px-2 rounded bg-cyan-500/20 border border-cyan-500/35 hover:bg-cyan-500/40 text-[9px] font-bold text-cyan-400 flex items-center gap-1 cursor-pointer select-none transition-all active:scale-95"
-                            title="Lock layout"
+                            className="p-1 rounded bg-cyan-500/20 hover:bg-cyan-500/40 text-[9px] font-bold text-cyan-400 cursor-pointer transition-all active:scale-95 flex items-center justify-center"
+                            title="Lock Layout (🔒)"
                           >
-                            🔒 Lock
+                            🔒
                           </button>
 
-                          <div className="w-[1px] h-3 bg-white/15" />
+                          <div className="w-[1px] h-3 bg-white/10" />
 
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[8px] font-bold text-white/50 uppercase">Scale</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] text-white/50 cursor-default" title="Scale Layout">🔎</span>
                             <button
                               onClick={() => updateWidgetConfig(widget, { scale: Math.max(0.5, cfg.scale - 0.05) })}
-                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer"
+                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
                             >
                               -
                             </button>
-                            <span className="text-[8px] font-mono font-bold text-cyan-400 w-6 text-center">
+                            <span className="text-[8px] font-mono font-bold text-cyan-400 w-7 text-center">
                               {Math.round(cfg.scale * 100)}%
                             </span>
                             <button
                               onClick={() => updateWidgetConfig(widget, { scale: Math.min(1.5, cfg.scale + 0.05) })}
-                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer"
+                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
                             >
                               +
                             </button>
                           </div>
 
-                          <div className="w-[1px] h-3 bg-white/15" />
+                          <div className="w-[1px] h-3 bg-white/10" />
 
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[8px] font-bold text-white/50 uppercase">Opacity</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] text-white/50 cursor-default" title="Adjust Opacity">🌓</span>
                             <button
                               onClick={() => updateWidgetConfig(widget, { opacity: Math.max(0.1, cfg.opacity - 0.1) })}
-                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer"
+                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
                             >
                               -
                             </button>
-                            <span className="text-[8px] font-mono font-bold text-cyan-400 w-6 text-center">
+                            <span className="text-[8px] font-mono font-bold text-cyan-400 w-7 text-center">
                               {Math.round(cfg.opacity * 100)}%
                             </span>
                             <button
                               onClick={() => updateWidgetConfig(widget, { opacity: Math.min(1.0, cfg.opacity + 0.1) })}
-                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer"
+                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
                             >
                               +
                             </button>
@@ -1869,7 +2001,7 @@ export default function Page() {
                         
                         {/* Hover micro controls for buttons (Hide / Scale / Lock) */}
                         <div 
-                          className="absolute -bottom-7 bg-black/90 border border-cyan-500/30 py-0.5 px-1 rounded-md flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto shadow-md"
+                          className="absolute -bottom-7 bg-[#090d16]/95 border border-cyan-500/30 py-0.5 px-1.5 rounded-md flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto shadow-md"
                           onMouseDown={(e) => e.stopPropagation()} 
                           onTouchStart={(e) => e.stopPropagation()}
                         >
@@ -1925,9 +2057,9 @@ export default function Page() {
         <div
           className="fixed z-[10000] bg-[#080d1a]/95 border border-cyan-500/30 rounded-xl p-1.5 shadow-[0_10px_30px_rgba(6,182,212,0.35)] backdrop-blur-md flex flex-col gap-1 text-xs text-white min-w-[140px]"
           style={{
-            left: `${contextMenu.x}px`,
+            left: `${Math.max(75, Math.min(typeof window !== "undefined" ? window.innerWidth - 75 : 300, contextMenu.x))}px`,
             top: `${contextMenu.y}px`,
-            transform: "translate(-50%, -100%)",
+            transform: contextMenu.y < 150 ? "translate(-50%, 15px)" : "translate(-50%, -105%)",
           }}
           onClick={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
@@ -1967,9 +2099,9 @@ export default function Page() {
         <div
           className="fixed z-[10000] bg-[#080d1a]/95 border border-cyan-500/30 rounded-xl p-1.5 shadow-[0_10px_30px_rgba(6,182,212,0.35)] backdrop-blur-md flex flex-col gap-1 text-xs text-white min-w-[165px]"
           style={{
-            left: `${contextMenu.x}px`,
+            left: `${Math.max(90, Math.min(typeof window !== "undefined" ? window.innerWidth - 90 : 300, contextMenu.x))}px`,
             top: `${contextMenu.y}px`,
-            transform: "translate(-50%, -100%)",
+            transform: contextMenu.y < 180 ? "translate(-50%, 15px)" : "translate(-50%, -105%)",
           }}
           onClick={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
@@ -2020,7 +2152,7 @@ export default function Page() {
       )}
 
       {/* 🧠 MEMORY VAULT MODAL (Mobile or voiceMode fallback) */}
-      {(isMobile || voiceMode) && memoryVaultOpen && (
+      {(isMobile || voiceMode) && memoryVaultOpen && !hudConfig.memory.visible && (
         <MemoryVault
           isOpen={memoryVaultOpen}
           onClose={() => setMemoryVaultOpen(false)}
@@ -2033,7 +2165,7 @@ export default function Page() {
       )}
 
       {/* 🎵 AMBIENT MUSIC PLAYER (Mobile fallback) */}
-      {isMobile && ambientPlayerOpen && (
+      {isMobile && ambientPlayerOpen && !hudConfig.songs.visible && (
         <AmbientPlayer
           isOpen={ambientPlayerOpen}
           onClose={() => setAmbientPlayerOpen(false)}
@@ -2041,7 +2173,7 @@ export default function Page() {
       )}
 
       {/* 📋 WORKSPACE WIDGET PANEL (Drawer overlay for screen widths < 1280px or mobile) */}
-      {(isUnder1280 || isMobile) && widgetPanelOpen && (
+      {(isUnder1280 || isMobile) && widgetPanelOpen && !hudConfig.todo.visible && (
         <WidgetPanel
           isMobile={true}
           isOpen={widgetPanelOpen}

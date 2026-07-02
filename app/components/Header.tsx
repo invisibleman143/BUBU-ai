@@ -11,8 +11,6 @@ interface HeaderProps {
   isMobile: boolean;
   setMobileSidebarOpen: (open: boolean) => void;
   personality: Personality;
-  voiceMode: boolean;
-  setVoiceMode: (v: boolean) => void;
   isDark: boolean;
   ambientPlayerOpen: boolean;
   setAmbientPlayerOpen: (open: boolean) => void;
@@ -52,8 +50,6 @@ export default function Header({
   isMobile,
   setMobileSidebarOpen,
   personality,
-  voiceMode,
-  setVoiceMode,
   isDark,
   ambientPlayerOpen,
   setAmbientPlayerOpen,
@@ -151,20 +147,6 @@ export default function Header({
               🎧
             </button>
 
-            {/* 🎙️ Voice Mode (Call BUBU) */}
-            {!voiceMode && (
-              <button
-                onClick={() => setVoiceMode(true)}
-                className={`w-9 h-9 rounded-xl border text-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center shadow-md backdrop-blur-md
-                  ${isDark 
-                    ? "bg-white/5 border-white/10 text-white hover:bg-white/10" 
-                    : "bg-black/5 border-black/10 text-black hover:bg-black/10"
-                  }`}
-                title="Call BUBU (Voice Mode)"
-              >
-                🎙️
-              </button>
-            )}
           </>
         )}
 
