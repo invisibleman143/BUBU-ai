@@ -1748,7 +1748,7 @@ export default function Page() {
                 </button>
               )}
 
-              {!isMobile && hudConfig.songsToggle.visible && (
+              {hudConfig.songsToggle.visible && (
                 <button
                   onClick={(e) => {
                     if (longPressActiveRef.current) {

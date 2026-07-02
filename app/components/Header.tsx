@@ -130,25 +130,7 @@ export default function Header({
 
       {/* 📞 RIGHT SECTION: QUICK LAUNCH */}
       <div className="flex items-center gap-3">
-        {isMobile && (
-          <>
-            {/* 🎧 Ambient Player */}
-            <button
-              onClick={() => setAmbientPlayerOpen(!ambientPlayerOpen)}
-              className={`w-9 h-9 rounded-xl border text-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center shadow-md backdrop-blur-md
-                ${ambientPlayerOpen 
-                  ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.25)]" 
-                  : isDark 
-                    ? "bg-white/5 border-white/10 text-white/90 hover:bg-white/10 hover:text-white" 
-                    : "bg-black/5 border-black/10 text-black/90 hover:bg-black/10 hover:text-black"
-                }`}
-              title="Ambient Music"
-            >
-              🎧
-            </button>
 
-          </>
-        )}
 
         {/* Vertical Separator */}
         <div className="w-[1px] h-6 bg-white/10 mx-1 hidden sm:block" />
