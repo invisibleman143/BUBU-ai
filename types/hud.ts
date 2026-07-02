@@ -35,3 +35,18 @@ export const DEFAULT_HUD_CONFIG: HUDConfig = {
   memoryToggle: { x: 88, y: 3, w: 3, h: 6, scale: 1.0, opacity: 1.0, visible: true },
   customizerToggle: { x: 92, y: 3, w: 3, h: 6, scale: 1.0, opacity: 1.0, visible: true },
 };
+
+export const DEFAULT_MOBILE_HUD_CONFIG: HUDConfig = {
+  header: { x: 2, y: 1, w: 96, h: 8, scale: 1.0, opacity: 1.0, visible: true },
+  sidebar: { x: 2, y: 10, w: 96, h: 78, scale: 1.0, opacity: 1.0, visible: false },
+  chat: { x: 2, y: 10, w: 96, h: 78, scale: 1.0, opacity: 1.0, visible: true },
+  visualizer: { x: 15, y: 15, w: 70, h: 40, scale: 1.0, opacity: 1.0, visible: false },
+  todo: { x: 5, y: 15, w: 90, h: 70, scale: 1.0, opacity: 1.0, visible: false },
+  songs: { x: 5, y: 25, w: 90, h: 50, scale: 1.0, opacity: 1.0, visible: false },
+  memory: { x: 5, y: 15, w: 90, h: 70, scale: 1.0, opacity: 1.0, visible: false },
+  todoToggle: { x: 15, y: 90, w: 12, h: 6, scale: 1.0, opacity: 1.0, visible: true },
+  songsToggle: { x: 35, y: 90, w: 12, h: 6, scale: 1.0, opacity: 1.0, visible: true },
+  memoryToggle: { x: 55, y: 90, w: 12, h: 6, scale: 1.0, opacity: 1.0, visible: true },
+  customizerToggle: { x: 75, y: 90, w: 12, h: 6, scale: 1.0, opacity: 1.0, visible: true },
+};
+
