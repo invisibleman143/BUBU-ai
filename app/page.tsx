@@ -1303,10 +1303,6 @@ export default function Page() {
             isDark={isDark}
             ambientPlayerOpen={ambientPlayerOpen}
             setAmbientPlayerOpen={handleToggleAmbientPlayer}
-            widgetPanelOpen={widgetPanelOpen}
-            setWidgetPanelOpen={handleToggleWidgetPanel}
-            memoryVaultOpen={memoryVaultOpen}
-            setMemoryVaultOpen={handleToggleMemoryVault}
             affectionScore={affectionScore}
             className="w-full h-full rounded-2xl border shadow-lg"
           />

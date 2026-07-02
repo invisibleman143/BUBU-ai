@@ -16,10 +16,6 @@ interface HeaderProps {
   isDark: boolean;
   ambientPlayerOpen: boolean;
   setAmbientPlayerOpen: (open: boolean) => void;
-  widgetPanelOpen: boolean;
-  setWidgetPanelOpen: (open: boolean) => void;
-  memoryVaultOpen: boolean;
-  setMemoryVaultOpen: (open: boolean) => void;
   affectionScore: number;
   style?: React.CSSProperties;
   className?: string;
@@ -61,10 +57,6 @@ export default function Header({
   isDark,
   ambientPlayerOpen,
   setAmbientPlayerOpen,
-  widgetPanelOpen,
-  setWidgetPanelOpen,
-  memoryVaultOpen,
-  setMemoryVaultOpen,
   affectionScore,
   style,
   className,
@@ -158,37 +150,6 @@ export default function Header({
             >
               🎧
             </button>
-
-            {/* 🧠 Memory Vault */}
-            <button
-              onClick={() => setMemoryVaultOpen(!memoryVaultOpen)}
-              className={`w-9 h-9 rounded-xl border text-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center shadow-md backdrop-blur-md
-                ${memoryVaultOpen 
-                  ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.25)]" 
-                  : isDark 
-                    ? "bg-white/5 border-white/10 text-white/90 hover:bg-white/10 hover:text-white" 
-                    : "bg-black/5 border-black/10 text-black/90 hover:bg-black/10 hover:text-black"
-                }`}
-              title="Memory Vault"
-            >
-              🧠
-            </button>
-
-            {/* 📋 Workspace Panel */}
-            <button
-              onClick={() => setWidgetPanelOpen(!widgetPanelOpen)}
-              className={`w-9 h-9 rounded-xl border text-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center shadow-md backdrop-blur-md
-                ${widgetPanelOpen 
-                  ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.25)]" 
-                  : isDark 
-                    ? "bg-white/5 border-white/10 text-white/90 hover:bg-white/10 hover:text-white" 
-                    : "bg-black/5 border-black/10 text-black/90 hover:bg-black/10 hover:text-black"
-                }`}
-              title="Workspace Panel"
-            >
-              📋
-            </button>
-
 
             {/* 🎙️ Voice Mode (Call BUBU) */}
             {!voiceMode && (
