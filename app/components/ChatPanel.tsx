@@ -234,12 +234,6 @@ export default function ChatPanel({
           ➤
         </button>
 
-        <button
-          onClick={startListening}
-          className={`px-4 py-2 rounded-xl font-semibold text-black transition-transform active:scale-95 hover:scale-[1.03] cursor-pointer ${themeStyles.userBubble}`}
-        >
-          🎙
-        </button>
       </div>
     </div>
   );
