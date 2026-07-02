@@ -16,6 +16,7 @@ import LandingPage from "./components/LandingPage";
 import NeuralOrb from "./components/NeuralOrb";
 import MemoryVault from "./components/MemoryVault";
 import AmbientPlayer from "./components/AmbientPlayer";
+import OnboardingModal from "./components/OnboardingModal";
 import DynamicBackground from "./components/DynamicBackground";
 import { motion, AnimatePresence } from "framer-motion";
 import { HUDConfig, DEFAULT_HUD_CONFIG, DEFAULT_MOBILE_HUD_CONFIG, HUDComponentConfig } from "../types/hud";
@@ -187,6 +188,7 @@ export default function Page() {
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [memoryVaultOpen, setMemoryVaultOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [globalMemory, setGlobalMemory] = useState<Record<string, string>>({});
   const [ambientPlayerOpen, setAmbientPlayerOpen] = useState(false);
   const [affectionScore, setAffectionScore] = useState(30); // Default to Acquaintance (30)
@@ -511,6 +513,10 @@ export default function Page() {
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    const onboardingDone = localStorage.getItem("bubu_onboarding_completed");
+    if (!onboardingDone) {
+      setOnboardingOpen(true);
+    }
     const savedAffection = localStorage.getItem("bubu_affection_score");
     if (savedAffection !== null) {
       setAffectionScore(Number(savedAffection));
@@ -2136,6 +2142,16 @@ export default function Page() {
 
           <button
             onClick={() => {
+              setOnboardingOpen(true);
+              setContextMenu(null);
+            }}
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-cyan-500/20 text-cyan-400 font-semibold transition cursor-pointer select-none text-left"
+          >
+            ❓ Show Welcome Guide
+          </button>
+
+          <button
+            onClick={() => {
               const defaultConfig = isMobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
               const configKey = isMobile ? "bubu_mobile_hud_config" : "bubu_hud_config";
               setHudConfig(defaultConfig);
@@ -2183,6 +2199,16 @@ export default function Page() {
           setNotes={setNotes}
         />
       )}
+
+      {/* ❓ INTERACTIVE ONBOARDING WELCOME GUIDE */}
+      <OnboardingModal
+        isOpen={onboardingOpen}
+        onClose={() => {
+          localStorage.setItem("bubu_onboarding_completed", "true");
+          setOnboardingOpen(false);
+        }}
+        personality={personality}
+      />
     </div>
   );
 }
