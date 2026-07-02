@@ -19,7 +19,7 @@ import AmbientPlayer from "./components/AmbientPlayer";
 import OnboardingModal from "./components/OnboardingModal";
 import DynamicBackground from "./components/DynamicBackground";
 import { motion, AnimatePresence } from "framer-motion";
-import { HUDConfig, DEFAULT_HUD_CONFIG, DEFAULT_MOBILE_HUD_CONFIG, HUDComponentConfig } from "../types/hud";
+import { HUDConfig, DEFAULT_HUD_CONFIG, DEFAULT_MOBILE_HUD_CONFIG, DEFAULT_TABLET_HUD_CONFIG, HUDComponentConfig } from "../types/hud";
 
 type AIState = "idle" | "listening" | "thinking" | "speaking";
 
@@ -533,9 +533,19 @@ export default function Page() {
     }
     
     // Load HUD config responsively based on current viewport width
-    const mobile = window.innerWidth < 768;
-    const configKey = mobile ? "bubu_mobile_hud_config" : "bubu_hud_config";
-    const defaultConfig = mobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
+    const width = window.innerWidth;
+    const mobile = width < 768;
+    const tablet = width >= 768 && width < 1280;
+    const configKey = mobile 
+      ? "bubu_mobile_hud_config" 
+      : tablet 
+        ? "bubu_tablet_hud_config" 
+        : "bubu_hud_config";
+    const defaultConfig = mobile 
+      ? DEFAULT_MOBILE_HUD_CONFIG 
+      : tablet 
+        ? DEFAULT_TABLET_HUD_CONFIG 
+        : DEFAULT_HUD_CONFIG;
     const savedHUDConfig = localStorage.getItem(configKey);
     if (savedHUDConfig !== null) {
       try {
@@ -550,7 +560,11 @@ export default function Page() {
 
   const updateHUDConfig = (newConfig: HUDConfig) => {
     setHudConfig(newConfig);
-    const configKey = isMobile ? "bubu_mobile_hud_config" : "bubu_hud_config";
+    const configKey = isMobile 
+      ? "bubu_mobile_hud_config" 
+      : isUnder1280 
+        ? "bubu_tablet_hud_config" 
+        : "bubu_hud_config";
     localStorage.setItem(configKey, JSON.stringify(newConfig));
   };
 
@@ -641,7 +655,11 @@ export default function Page() {
       snapY = 50;
     }
 
-    const defaultConfig = isMobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
+    const defaultConfig = isMobile 
+      ? DEFAULT_MOBILE_HUD_CONFIG 
+      : isUnder1280 
+        ? DEFAULT_TABLET_HUD_CONFIG 
+        : DEFAULT_HUD_CONFIG;
     for (const key of Object.keys(hudConfig)) {
       if (key === activeDrag) continue;
       const cfg = hudConfig[key as keyof HUDConfig] || defaultConfig[key as keyof HUDConfig];
@@ -660,21 +678,32 @@ export default function Page() {
 
   const isCustomizing = Object.keys(hudConfig).some(key => unlockedWidgets[key]);
 
-  const prevIsMobileRef = useRef<boolean | null>(null);
+  const prevCategoryRef = useRef<"mobile" | "tablet" | "desktop" | null>(null);
 
   // Track responsive screen width & swap HUD config keys if screen type changes
   useEffect(() => {
     const check = () => {
       const width = window.innerWidth;
       const mobile = width < 768;
+      const tablet = width >= 768 && width < 1280;
       setIsMobile(mobile);
       setIsUnder1280(width < 1280);
 
-      // If mobile state actually changed (e.g. crossing 768px)
-      if (prevIsMobileRef.current !== mobile) {
-        prevIsMobileRef.current = mobile;
-        const configKey = mobile ? "bubu_mobile_hud_config" : "bubu_hud_config";
-        const defaultConfig = mobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
+      const category = mobile ? "mobile" : tablet ? "tablet" : "desktop";
+
+      if (prevCategoryRef.current !== category) {
+        prevCategoryRef.current = category;
+        const configKey = category === "mobile" 
+          ? "bubu_mobile_hud_config" 
+          : category === "tablet" 
+            ? "bubu_tablet_hud_config" 
+            : "bubu_hud_config";
+        const defaultConfig = category === "mobile" 
+          ? DEFAULT_MOBILE_HUD_CONFIG 
+          : category === "tablet" 
+            ? DEFAULT_TABLET_HUD_CONFIG 
+            : DEFAULT_HUD_CONFIG;
+            
         const savedHUDConfig = localStorage.getItem(configKey);
         if (savedHUDConfig !== null) {
           try {
@@ -1846,7 +1875,11 @@ export default function Page() {
           <div className="absolute inset-0 z-[9990] pointer-events-none">
             {(Object.keys(hudConfig) as Array<keyof HUDConfig>).map((widget) => {
               if (widget === "customizerToggle") return null;
-              const defaultConfig = isMobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
+              const defaultConfig = isMobile 
+                ? DEFAULT_MOBILE_HUD_CONFIG 
+                : isUnder1280 
+                  ? DEFAULT_TABLET_HUD_CONFIG 
+                  : DEFAULT_HUD_CONFIG;
               const cfg = hudConfig[widget] || defaultConfig[widget];
               if (!cfg.visible) return null;
               if (!unlockedWidgets[widget]) return null;
@@ -2152,8 +2185,16 @@ export default function Page() {
 
           <button
             onClick={() => {
-              const defaultConfig = isMobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
-              const configKey = isMobile ? "bubu_mobile_hud_config" : "bubu_hud_config";
+              const defaultConfig = isMobile 
+                ? DEFAULT_MOBILE_HUD_CONFIG 
+                : isUnder1280 
+                  ? DEFAULT_TABLET_HUD_CONFIG 
+                  : DEFAULT_HUD_CONFIG;
+              const configKey = isMobile 
+                ? "bubu_mobile_hud_config" 
+                : isUnder1280 
+                  ? "bubu_tablet_hud_config" 
+                  : "bubu_hud_config";
               setHudConfig(defaultConfig);
               localStorage.setItem(configKey, JSON.stringify(defaultConfig));
               setUnlockedWidgets({});

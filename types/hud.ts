@@ -36,6 +36,20 @@ export const DEFAULT_HUD_CONFIG: HUDConfig = {
   customizerToggle: { x: 92, y: 3, w: 3, h: 6, scale: 1.0, opacity: 1.0, visible: true },
 };
 
+export const DEFAULT_TABLET_HUD_CONFIG: HUDConfig = {
+  header: { x: 1, y: 1, w: 98, h: 8, scale: 1.0, opacity: 1.0, visible: true },
+  sidebar: { x: 1, y: 11, w: 25, h: 86, scale: 1.0, opacity: 1.0, visible: false },
+  chat: { x: 2, y: 11, w: 54, h: 86, scale: 1.0, opacity: 1.0, visible: true },
+  visualizer: { x: 58, y: 11, w: 40, h: 86, scale: 1.0, opacity: 1.0, visible: true },
+  todo: { x: 2, y: 11, w: 25, h: 86, scale: 1.0, opacity: 1.0, visible: false },
+  songs: { x: 58, y: 55, w: 40, h: 41, scale: 1.0, opacity: 1.0, visible: false },
+  memory: { x: 15, y: 15, w: 70, h: 70, scale: 1.0, opacity: 1.0, visible: false },
+  todoToggle: { x: 80, y: 3, w: 3, h: 6, scale: 1.0, opacity: 1.0, visible: true },
+  songsToggle: { x: 84, y: 3, w: 3, h: 6, scale: 1.0, opacity: 1.0, visible: true },
+  memoryToggle: { x: 88, y: 3, w: 3, h: 6, scale: 1.0, opacity: 1.0, visible: true },
+  customizerToggle: { x: 92, y: 3, w: 3, h: 6, scale: 1.0, opacity: 1.0, visible: true },
+};
+
 export const DEFAULT_MOBILE_HUD_CONFIG: HUDConfig = {
   header: { x: 2, y: 1, w: 96, h: 8, scale: 1.0, opacity: 1.0, visible: true },
   sidebar: { x: 2, y: 10, w: 96, h: 78, scale: 1.0, opacity: 1.0, visible: false },
