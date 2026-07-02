@@ -1840,7 +1840,6 @@ export default function Page() {
           <div className="absolute inset-0 z-[9990] pointer-events-none">
             {(Object.keys(hudConfig) as Array<keyof HUDConfig>).map((widget) => {
               if (widget === "customizerToggle") return null;
-              if (isMobile && widget === "songsToggle") return null;
               const defaultConfig = isMobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
               const cfg = hudConfig[widget] || defaultConfig[widget];
               if (!cfg.visible) return null;
