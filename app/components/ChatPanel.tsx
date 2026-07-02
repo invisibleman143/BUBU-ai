@@ -204,21 +204,6 @@ export default function ChatPanel({
       >
         {/* Quick Launch Buttons (hidden on desktop/laptop, shown on mobile/tablet portrait) */}
         <div className="flex lg:hidden gap-2 flex-shrink-0">
-          {/* 🎧 Ambient Player Toggle */}
-          <button
-            onClick={() => setAmbientPlayerOpen?.(!ambientPlayerOpen)}
-            className={`w-9 h-9 rounded-xl border text-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center shadow-md backdrop-blur-md flex-shrink-0
-              ${ambientPlayerOpen 
-                ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.25)]" 
-                : isDark 
-                  ? "bg-white/5 border-white/10 text-white/90 hover:bg-white/10 hover:text-white" 
-                  : "bg-black/5 border-black/10 text-black/90 hover:bg-black/10 hover:text-black"
-              }`}
-            title="Ambient Music"
-          >
-            🎧
-          </button>
-
           {/* 📞 Call BUBU Button */}
           <button
             onClick={() => setVoiceMode?.(true)}

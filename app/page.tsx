@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { Chat, ChatMessage } from "../types/chat";
 import { Personality, personalityThemeMap } from "../types/personality";
@@ -302,12 +302,22 @@ export default function Page() {
   const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
-  const startDrag = (e: React.MouseEvent | React.TouchEvent, widget: string) => {
+  const activeDragRef = useRef<string | null>(null);
+  activeDragRef.current = activeDrag;
+
+  const isMobileRef = useRef<boolean>(false);
+  isMobileRef.current = isMobile;
+
+  const hudConfigRef = useRef<HUDConfig>(hudConfig);
+  hudConfigRef.current = hudConfig;
+
+  const startDrag = useCallback((e: React.MouseEvent | React.TouchEvent, widget: string) => {
     setActiveDrag(widget);
     const { clientX, clientY } = getEventCoords(e);
     
-    const defaultConfig = isMobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
-    const targetConfig = hudConfig[widget as keyof HUDConfig] || defaultConfig[widget as keyof HUDConfig];
+    const mobile = isMobileRef.current;
+    const defaultConfig = mobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
+    const targetConfig = hudConfigRef.current[widget as keyof HUDConfig] || defaultConfig[widget as keyof HUDConfig];
     
     dragStartRef.current = {
       clientX,
@@ -316,10 +326,11 @@ export default function Page() {
       startY: targetConfig.y,
     };
     e.preventDefault();
-  };
+  }, []);
 
-  const onDragMove = (e: MouseEvent | TouchEvent) => {
-    if (!activeDrag || !dragStartRef.current) return;
+  const onDragMove = useCallback((e: MouseEvent | TouchEvent) => {
+    const currentActiveDrag = activeDragRef.current;
+    if (!currentActiveDrag || !dragStartRef.current) return;
     const { clientX, clientY } = getEventCoords(e);
 
     const dx = clientX - dragStartRef.current.clientX;
@@ -336,26 +347,29 @@ export default function Page() {
     newX = Math.round(newX);
     newY = Math.round(newY);
 
-    const defaultConfig = isMobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
-    const targetWidgetConfig = hudConfig[activeDrag as keyof HUDConfig] || defaultConfig[activeDrag as keyof HUDConfig];
+    const mobile = isMobileRef.current;
+    const defaultConfig = mobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
 
-    const updatedConfig = {
-      ...hudConfig,
-      [activeDrag]: {
-        ...targetWidgetConfig,
-        x: newX,
-        y: newY,
-      },
-    };
-    setHudConfig(updatedConfig);
-    const configKey = isMobile ? "bubu_mobile_hud_config" : "bubu_hud_config";
-    localStorage.setItem(configKey, JSON.stringify(updatedConfig));
-  };
+    setHudConfig((prev) => {
+      const targetWidgetConfig = prev[currentActiveDrag as keyof HUDConfig] || defaultConfig[currentActiveDrag as keyof HUDConfig];
+      const updatedConfig = {
+        ...prev,
+        [currentActiveDrag]: {
+          ...targetWidgetConfig,
+          x: newX,
+          y: newY,
+        },
+      };
+      const configKey = mobile ? "bubu_mobile_hud_config" : "bubu_hud_config";
+      localStorage.setItem(configKey, JSON.stringify(updatedConfig));
+      return updatedConfig;
+    });
+  }, []);
 
-  const stopDrag = () => {
+  const stopDrag = useCallback(() => {
     setActiveDrag(null);
     dragStartRef.current = null;
-  };
+  }, []);
 
   // Bind mouse/touch move and up events to window during active drag
   useEffect(() => {
@@ -371,7 +385,7 @@ export default function Page() {
       window.removeEventListener("touchmove", onDragMove);
       window.removeEventListener("touchend", stopDrag);
     };
-  }, [activeDrag, hudConfig]);
+  }, [activeDrag, onDragMove, stopDrag]);
 
   const updateWidgetConfig = (widget: keyof HUDConfig, updates: Partial<HUDComponentConfig>) => {
     const defaultConfig = isMobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
@@ -1619,7 +1633,7 @@ export default function Page() {
                 </button>
               )}
 
-              {hudConfig.songsToggle.visible && (
+              {!isMobile && hudConfig.songsToggle.visible && (
                 <button
                   onClick={(e) => {
                     if (longPressActiveRef.current) {
@@ -1711,6 +1725,7 @@ export default function Page() {
           <div className="absolute inset-0 z-[9990] pointer-events-none">
             {(Object.keys(hudConfig) as Array<keyof HUDConfig>).map((widget) => {
               if (widget === "customizerToggle") return null;
+              if (isMobile && widget === "songsToggle") return null;
               const defaultConfig = isMobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
               const cfg = hudConfig[widget] || defaultConfig[widget];
               if (!cfg.visible) return null;
@@ -1919,6 +1934,7 @@ export default function Page() {
             transform: "translate(-50%, -100%)",
           }}
           onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           <div className="px-2.5 py-1 text-[9px] font-bold text-white/40 uppercase tracking-wider select-none border-b border-white/5 pb-1.5 mb-1">
             {widgetLabels[contextMenu.widget] || contextMenu.widget}
@@ -1960,6 +1976,7 @@ export default function Page() {
             transform: "translate(-50%, -100%)",
           }}
           onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           <div className="px-2.5 py-1 text-[9px] font-bold text-white/40 uppercase tracking-wider select-none border-b border-white/5 pb-1.5 mb-1">
             {isMobile ? "HUD Actions" : "Desktop Actions"}
@@ -1972,6 +1989,7 @@ export default function Page() {
               </div>
               {(Object.keys(hudConfig) as Array<keyof HUDConfig>).map((key) => {
                 if (key === "customizerToggle" || hudConfig[key].visible) return null;
+                if (isMobile && key === "songsToggle") return null;
                 return (
                   <button
                     key={key}
