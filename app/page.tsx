@@ -8,9 +8,17 @@ import { detectMemory } from "@/lib/memory";
 
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
+import WidgetPanel from "./components/WidgetPanel";
 import DesktopVisualizer from "./components/DesktopVisualizer";
 import VoiceMode from "./components/VoiceMode";
 import Header from "./components/Header";
+import LandingPage from "./components/LandingPage";
+import NeuralOrb from "./components/NeuralOrb";
+import MemoryVault from "./components/MemoryVault";
+import AmbientPlayer from "./components/AmbientPlayer";
+import DynamicBackground from "./components/DynamicBackground";
+import { motion, AnimatePresence } from "framer-motion";
+import { HUDConfig, DEFAULT_HUD_CONFIG, HUDComponentConfig } from "../types/hud";
 
 type AIState = "idle" | "listening" | "thinking" | "speaking";
 
@@ -137,11 +145,26 @@ const playConnectionSound = (connected: boolean) => {
   }
 };
 
+const widgetLabels: Record<string, string> = {
+  header: "👑 Header Bar",
+  sidebar: "📁 Sidebar (Sessions)",
+  chat: "💬 Chat Panel",
+  visualizer: "🪐 AIVatar Visualizer",
+  todo: "📝 Todo List",
+  songs: "🎵 Music Player",
+  memory: "🧠 Memory Vault",
+  todoToggle: "📋 Todo Toggle Button",
+  songsToggle: "🎧 Music Toggle Button",
+  memoryToggle: "🧠 Memory Toggle Button",
+  customizerToggle: "🎨 HUD Editor Button",
+};
+
 export default function Page() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [state, setState] = useState<AIState>("idle");
   const [theme] = useState<"dark" | "light">("dark");
   const [isMobile, setIsMobile] = useState(false);
+  const [isUnder1280, setIsUnder1280] = useState(false);
   const [inputText, setInputText] = useState("");
   const [voiceMode, setVoiceMode] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -154,12 +177,303 @@ export default function Page() {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [memoryVaultOpen, setMemoryVaultOpen] = useState(false);
+  const [globalMemory, setGlobalMemory] = useState<Record<string, string>>({});
+  const [ambientPlayerOpen, setAmbientPlayerOpen] = useState(false);
+  const [affectionScore, setAffectionScore] = useState(30); // Default to Acquaintance (30)
+  const [hudConfig, setHudConfig] = useState<HUDConfig>(DEFAULT_HUD_CONFIG);
+  const [unlockedWidgets, setUnlockedWidgets] = useState<Record<string, boolean>>({});
+  const [contextMenu, setContextMenu] = useState<{
+    widget: keyof HUDConfig;
+    x: number;
+    y: number;
+  } | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressActiveRef = useRef<boolean>(false);
+  const longPressPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  const startLongPress = (e: React.MouseEvent | React.TouchEvent, widget: keyof HUDConfig) => {
+    if ("button" in e && e.button !== 0) return;
+    if (unlockedWidgets[widget]) return;
+
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
+    longPressPosRef.current = { x: clientX, y: clientY };
+    longPressActiveRef.current = false;
+    
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    
+    longPressTimerRef.current = setTimeout(() => {
+      longPressActiveRef.current = true;
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      setContextMenu({
+        widget,
+        x: clientX,
+        y: clientY,
+      });
+    }, 700);
+  };
+
+  const moveLongPress = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!longPressPosRef.current) return;
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
+    const dx = clientX - longPressPosRef.current.x;
+    const dy = clientY - longPressPosRef.current.y;
+    if (Math.sqrt(dx * dx + dy * dy) > 10) {
+      cancelLongPress();
+    }
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressPosRef.current = null;
+  };
+
+  const endLongPress = (e: React.MouseEvent | React.TouchEvent) => {
+    if (longPressActiveRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      setTimeout(() => {
+        longPressActiveRef.current = false;
+      }, 50);
+    }
+    cancelLongPress();
+  };
+
+  useEffect(() => {
+    if (contextMenu) {
+      const closeMenu = () => setContextMenu(null);
+      window.addEventListener("click", closeMenu);
+      window.addEventListener("touchstart", closeMenu);
+      return () => {
+        window.removeEventListener("click", closeMenu);
+        window.removeEventListener("touchstart", closeMenu);
+      };
+    }
+  }, [contextMenu]);
+
+  const [activeDrag, setActiveDrag] = useState<string | null>(null);
+  const dragStartRef = useRef<{ clientX: number; clientY: number; startX: number; startY: number } | null>(null);
+  const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  const startDrag = (e: React.MouseEvent | React.TouchEvent, widget: string) => {
+    setActiveDrag(widget);
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
+    const targetConfig = hudConfig[widget as keyof HUDConfig] || DEFAULT_HUD_CONFIG[widget as keyof HUDConfig];
+    
+    dragStartRef.current = {
+      clientX,
+      clientY,
+      startX: targetConfig.x,
+      startY: targetConfig.y,
+    };
+    e.preventDefault();
+  };
+
+  const onDragMove = (e: MouseEvent | TouchEvent) => {
+    if (!activeDrag || !dragStartRef.current) return;
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+
+    const dx = clientX - dragStartRef.current.clientX;
+    const dy = clientY - dragStartRef.current.clientY;
+
+    // Convert pixel offset to percentage of window width/height
+    const dxPercent = (dx / window.innerWidth) * 100;
+    const dyPercent = (dy / window.innerHeight) * 100;
+
+    let newX = Math.max(0, Math.min(98, dragStartRef.current.startX + dxPercent));
+    let newY = Math.max(0, Math.min(95, dragStartRef.current.startY + dyPercent));
+
+    // Snap to grid (1% increments)
+    newX = Math.round(newX);
+    newY = Math.round(newY);
+
+    const targetWidgetConfig = hudConfig[activeDrag as keyof HUDConfig] || DEFAULT_HUD_CONFIG[activeDrag as keyof HUDConfig];
+
+    const updatedConfig = {
+      ...hudConfig,
+      [activeDrag]: {
+        ...targetWidgetConfig,
+        x: newX,
+        y: newY,
+      },
+    };
+    setHudConfig(updatedConfig);
+    localStorage.setItem("bubu_hud_config", JSON.stringify(updatedConfig));
+  };
+
+  const stopDrag = () => {
+    setActiveDrag(null);
+    dragStartRef.current = null;
+  };
+
+  // Bind mouse/touch move and up events to window during active drag
+  useEffect(() => {
+    if (activeDrag) {
+      window.addEventListener("mousemove", onDragMove);
+      window.addEventListener("mouseup", stopDrag);
+      window.addEventListener("touchmove", onDragMove, { passive: false });
+      window.addEventListener("touchend", stopDrag);
+    }
+    return () => {
+      window.removeEventListener("mousemove", onDragMove);
+      window.removeEventListener("mouseup", stopDrag);
+      window.removeEventListener("touchmove", onDragMove);
+      window.removeEventListener("touchend", stopDrag);
+    };
+  }, [activeDrag, hudConfig]);
+
+  const updateWidgetConfig = (widget: keyof HUDConfig, updates: Partial<HUDComponentConfig>) => {
+    const targetConfig = hudConfig[widget] || DEFAULT_HUD_CONFIG[widget];
+    const updated = {
+      ...hudConfig,
+      [widget]: {
+        ...targetConfig,
+        ...updates,
+      },
+    };
+    setHudConfig(updated);
+    localStorage.setItem("bubu_hud_config", JSON.stringify(updated));
+  };
+
+  const handleBackgroundDoubleClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      setContextMenu({
+        widget: "background" as any,
+        x: e.clientX,
+        y: e.clientY,
+      });
+    }
+  };
+
+  const handleBackgroundTouchStart = (e: React.TouchEvent) => {
+    if (e.target !== e.currentTarget) return;
+    const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    
+    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+    
+    touchTimeoutRef.current = setTimeout(() => {
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      setContextMenu({
+        widget: "background" as any,
+        x: touch.clientX,
+        y: touch.clientY,
+      });
+    }, 700);
+  };
+
+  const handleBackgroundTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartPosRef.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartPosRef.current.x;
+    const dy = touch.clientY - touchStartPosRef.current.y;
+    if (Math.sqrt(dx * dx + dy * dy) > 10) {
+      if (touchTimeoutRef.current) {
+        clearTimeout(touchTimeoutRef.current);
+        touchTimeoutRef.current = null;
+      }
+    }
+  };
+
+  const handleBackgroundTouchEnd = () => {
+    if (touchTimeoutRef.current) {
+      clearTimeout(touchTimeoutRef.current);
+      touchTimeoutRef.current = null;
+    }
+    touchStartPosRef.current = null;
+  };
+
+  const [widgetPanelOpen, setWidgetPanelOpen] = useState(false);
+  const [todos, setTodos] = useState<{ id: string; text: string; completed: boolean }[]>([]);
+  const [notes, setNotes] = useState("");
+
+  const globalMemoryRef = useRef<Record<string, string>>({});
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const savedAffection = localStorage.getItem("bubu_affection_score");
+    if (savedAffection !== null) {
+      setAffectionScore(Number(savedAffection));
+    }
+    const savedTodos = localStorage.getItem("bubu_widget_todo");
+    if (savedTodos !== null) {
+      try {
+        setTodos(JSON.parse(savedTodos));
+      } catch {}
+    }
+    const savedNotes = localStorage.getItem("bubu_widget_notes");
+    if (savedNotes !== null) {
+      setNotes(savedNotes);
+    }
+    const savedHUDConfig = localStorage.getItem("bubu_hud_config");
+    if (savedHUDConfig !== null) {
+      try {
+        setHudConfig({ ...DEFAULT_HUD_CONFIG, ...JSON.parse(savedHUDConfig) });
+      } catch {}
+    }
+  }, []);
+
+  const updateHUDConfig = (newConfig: HUDConfig) => {
+    setHudConfig(newConfig);
+    localStorage.setItem("bubu_hud_config", JSON.stringify(newConfig));
+  };
+
+  const updateAffection = (sentimentShift: number) => {
+    setAffectionScore((prev) => {
+      const next = Math.max(0, Math.min(100, prev + sentimentShift));
+      localStorage.setItem("bubu_affection_score", String(next));
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    globalMemoryRef.current = globalMemory;
+  }, [globalMemory]);
 
   const triggerVoiceMode = (v: boolean) => {
     if (v) {
       setIsIncomingCall(false);
     }
     setVoiceMode(v);
+  };
+
+  const handleToggleWidgetPanel = (open: boolean) => {
+    setWidgetPanelOpen(open);
+    if (open) {
+      setMemoryVaultOpen(false);
+      setAmbientPlayerOpen(false);
+    }
+  };
+
+  const handleToggleAmbientPlayer = (open: boolean) => {
+    setAmbientPlayerOpen(open);
+    if (open) {
+      setWidgetPanelOpen(false);
+      setMemoryVaultOpen(false);
+    }
+  };
+
+  const handleToggleMemoryVault = (open: boolean) => {
+    setMemoryVaultOpen(open);
+    if (open) {
+      setWidgetPanelOpen(false);
+      setAmbientPlayerOpen(false);
+    }
   };
 
   const recognitionRef = useRef<any>(null);
@@ -193,21 +507,40 @@ export default function Page() {
 
   // Track responsive screen width
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
+    const check = () => {
+      const width = window.innerWidth;
+      setIsMobile(width < 768);
+      setIsUnder1280(width < 1280);
+    };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Sync state scrolling
+  // Sync state scrolling (Smart Auto-Scroll)
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const anchor = chatEndRef.current;
+    if (!anchor) return;
+    const container = anchor.parentElement;
+    if (!container) return;
+
+    const lastMessage = chatHistory[chatHistory.length - 1];
+    const lastIsUser = lastMessage?.role === "user";
+
+    // Distance from the bottom of the message container
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+
+    // Only scroll down if user sent a message, or is already near the bottom of the chat
+    if (lastIsUser || distanceFromBottom < 180) {
+      anchor.scrollIntoView({ behavior: "smooth" });
+    }
   }, [chatHistory, isTyping]);
 
   // Load chat session history from storage
   useEffect(() => {
     const savedChats = localStorage.getItem("bubu_chats");
     const savedChatId = localStorage.getItem("bubu_current_chat");
+    const savedGlobalMemory = localStorage.getItem("bubu_global_memory");
 
     if (savedChats) {
       try {
@@ -221,6 +554,14 @@ export default function Page() {
         }
       } catch (e) {
         console.error("Failed to load chats from storage");
+      }
+    }
+
+    if (savedGlobalMemory) {
+      try {
+        setGlobalMemory(JSON.parse(savedGlobalMemory));
+      } catch (e) {
+        console.error("Failed to load global memory from storage");
       }
     }
   }, []);
@@ -311,8 +652,6 @@ export default function Page() {
 
   // Manage Speak (TTS)
   const speak = async (text: string) => {
-    if (!window.speechSynthesis) return;
-
     if (recognitionRef.current && isListeningRef.current) {
       recognitionRef.current.stop();
       isListeningRef.current = false;
@@ -320,6 +659,58 @@ export default function Page() {
 
     const cleanText = stripEmojis(text);
     if (!cleanText) return;
+
+    try {
+      setState("speaking");
+
+      // Select voice based on personality
+      let voiceName = "en-US-AriaNeural"; // Default premium female voice
+      if (personality === "romantic") voiceName = "en-US-AnaNeural";
+      if (personality === "caring") voiceName = "en-US-EmmaNeural";
+      if (personality === "playful") voiceName = "en-US-AriaNeural";
+      if (personality === "angry") voiceName = "en-US-JennyNeural";
+      if (personality === "command") voiceName = "en-US-GuyNeural"; // Deep male voice for command mode
+
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: cleanText, voice: voiceName }),
+      });
+
+      if (!res.ok) throw new Error("TTS API failed");
+
+      const blob = await res.blob();
+      const audioUrl = URL.createObjectURL(blob);
+
+      if (!ttsAudioRef.current) {
+        ttsAudioRef.current = new Audio();
+      }
+
+      // Stop any currently playing TTS audio
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current.src = audioUrl;
+
+      ttsAudioRef.current.onended = () => {
+        lastSpeakingEndTimeRef.current = Date.now();
+        setState("idle");
+      };
+
+      ttsAudioRef.current.onerror = () => {
+        fallbackSpeak(cleanText);
+      };
+
+      await ttsAudioRef.current.play();
+    } catch (err) {
+      console.warn("Premium TTS failed, falling back to local speech synthesis", err);
+      fallbackSpeak(cleanText);
+    }
+  };
+
+  const fallbackSpeak = async (cleanText: string) => {
+    if (!window.speechSynthesis) {
+      setState("idle");
+      return;
+    }
 
     const loadVoices = (): Promise<SpeechSynthesisVoice[]> => {
       return new Promise((resolve) => {
@@ -334,41 +725,43 @@ export default function Page() {
       });
     };
 
-    const voices = await loadVoices();
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = "en-IN";
+    try {
+      const voices = await loadVoices();
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = "en-IN";
 
-    const heera = voices.find(
-      (v) => v.name === "Microsoft Heera - English (India)"
-    );
+      const heera = voices.find(
+        (v) => v.name === "Microsoft Heera - English (India)"
+      );
 
-    if (heera) {
-      utterance.voice = heera;
-    } else {
-      const indian = voices.find((v) => v.lang === "en-IN");
-      if (indian) utterance.voice = indian;
+      if (heera) {
+        utterance.voice = heera;
+      } else {
+        const indian = voices.find((v) => v.lang === "en-IN");
+        if (indian) utterance.voice = indian;
+      }
+
+      const { pitch, rate } = getSpeechParameters(cleanText, personality);
+      utterance.pitch = pitch;
+      utterance.rate = rate;
+
+      utterance.onstart = () => setState("speaking");
+      utterance.onend = () => {
+        lastSpeakingEndTimeRef.current = Date.now();
+        setState("idle");
+      };
+      utterance.onerror = () => {
+        lastSpeakingEndTimeRef.current = Date.now();
+        setState("idle");
+      };
+
+      window.speechSynthesis.cancel();
+      setTimeout(() => {
+        window.speechSynthesis.speak(utterance);
+      }, 100);
+    } catch (e) {
+      setState("idle");
     }
-
-    // Dynamic voice emotions based on active personality and sentiment analysis
-    const { pitch, rate } = getSpeechParameters(cleanText, personality);
-    utterance.pitch = pitch;
-    utterance.rate = rate;
-
-    utterance.onstart = () => setState("speaking");
-    utterance.onend = () => {
-      lastSpeakingEndTimeRef.current = Date.now();
-      setState("idle");
-    };
-    utterance.onerror = () => {
-      lastSpeakingEndTimeRef.current = Date.now();
-      setState("idle");
-    };
-
-    window.speechSynthesis.cancel();
-
-    setTimeout(() => {
-      window.speechSynthesis.speak(utterance);
-    }, 100);
   };
 
   // Type AIMessage & trigger TTS
@@ -397,6 +790,28 @@ export default function Page() {
       );
       if (index >= fullText.length) clearInterval(interval);
     }, 25);
+  };
+
+  const parseReplyAndSentiment = (replyText: string) => {
+    let rawReply = replyText || "";
+    let sentimentShift = 0;
+    
+    // Extract sentiment score if present in any format
+    const sentimentMatch = rawReply.match(/<sentiment>\s*([\+\-]?\d+)\s*<\/sentiment>/i) || 
+                           rawReply.match(/([\+\-]?\d+)\s*<\/sentiment>/i);
+    if (sentimentMatch) {
+      sentimentShift = parseInt(sentimentMatch[1], 10);
+    }
+
+    // Clean up all tags, stray tags, and trailing numbers before the tags
+    rawReply = rawReply
+      .replace(/<sentiment>[\+\-]?\d+<\/sentiment>/gi, "")
+      .replace(/[\+\-]?\d+\s*<\/sentiment>/gi, "")
+      .replace(/<\/sentiment>/gi, "")
+      .replace(/<sentiment>/gi, "")
+      .trim();
+
+    return { cleanReply: rawReply, sentimentShift };
   };
 
   // Fetch AI Response completions
@@ -438,6 +853,7 @@ export default function Page() {
           personality,
           uid: user?.uid,
           memory,
+          affectionScore, // Pass affectionScore to API
         }),
       });
 
@@ -450,8 +866,52 @@ export default function Page() {
         return;
       }
 
+      if (data?.action === "widget_update") {
+        const type = data.type;
+        const taskData = data.data;
+
+
+        if (type === "todo_add" && taskData) {
+          setTodos((prev) => {
+            const item = { id: crypto.randomUUID(), text: taskData, completed: false };
+            const updated = [...prev, item];
+            localStorage.setItem("bubu_widget_todo", JSON.stringify(updated));
+            return updated;
+          });
+        } else if (type === "todo_complete" && taskData) {
+          setTodos((prev) => {
+            const updated = prev.map((t) =>
+              t.text.toLowerCase().includes(taskData.toLowerCase())
+                ? { ...t, completed: true }
+                : t
+            );
+            localStorage.setItem("bubu_widget_todo", JSON.stringify(updated));
+            return updated;
+          });
+        } else if (type === "todo_remove" && taskData) {
+          setTodos((prev) => {
+            const updated = prev.filter((t) => !t.text.toLowerCase().includes(taskData.toLowerCase()));
+            localStorage.setItem("bubu_widget_todo", JSON.stringify(updated));
+            return updated;
+          });
+        } else if (type === "note_update" && taskData) {
+          setNotes((prev) => {
+            const updated = prev ? `${prev}\n${taskData}` : taskData;
+            localStorage.setItem("bubu_widget_notes", updated);
+            return updated;
+          });
+        }
+
+        const { cleanReply, sentimentShift } = parseReplyAndSentiment(data.reply);
+        updateAffection(sentimentShift);
+        typeAIMessage(cleanReply);
+        return;
+      }
+
       if (data?.reply) {
-        typeAIMessage(data.reply);
+        const { cleanReply, sentimentShift } = parseReplyAndSentiment(data.reply);
+        updateAffection(sentimentShift);
+        typeAIMessage(cleanReply);
         return;
       }
 
@@ -471,9 +931,15 @@ export default function Page() {
     const detected = detectMemory(text);
     setInputText("");
 
+    const updatedGlobal = { ...globalMemory, ...detected };
+    if (Object.keys(detected).length > 0) {
+      setGlobalMemory(updatedGlobal);
+      localStorage.setItem("bubu_global_memory", JSON.stringify(updatedGlobal));
+    }
+
     const accumulatedMemory = {
       ...(currentChat?.memory || {}),
-      ...detected,
+      ...updatedGlobal,
     };
 
     setChats((prev) =>
@@ -509,7 +975,8 @@ export default function Page() {
 
     recognition.onresult = (e: any) => {
       // Prevent feedback loops: Ignore mic inputs if Bubu is speaking or just finished speaking
-      if (window.speechSynthesis && window.speechSynthesis.speaking) {
+      const isSpeakingActive = (ttsAudioRef.current && !ttsAudioRef.current.paused) || (window.speechSynthesis && window.speechSynthesis.speaking);
+      if (isSpeakingActive) {
         console.log("Ignored mic input: Bubu is speaking.");
         return;
       }
@@ -523,9 +990,16 @@ export default function Page() {
       if (!text || !currentChatId) return;
 
       const detected = detectMemory(text);
+      const updatedGlobal = { ...globalMemoryRef.current, ...detected };
+
+      if (Object.keys(detected).length > 0) {
+        setGlobalMemory(updatedGlobal);
+        localStorage.setItem("bubu_global_memory", JSON.stringify(updatedGlobal));
+      }
+
       const accumulated = {
         ...currentChatMemoryRef.current,
-        ...detected,
+        ...updatedGlobal,
       };
 
       setChats((prev) =>
@@ -564,7 +1038,8 @@ export default function Page() {
       const delay = setTimeout(() => {
         if (!isListeningRef.current) {
           // Double check to verify speech synthesis is not active
-          if (window.speechSynthesis && !window.speechSynthesis.speaking) {
+          const isSpeakingActive = (ttsAudioRef.current && !ttsAudioRef.current.paused) || (window.speechSynthesis && window.speechSynthesis.speaking);
+          if (!isSpeakingActive) {
             startListening();
           }
         }
@@ -589,12 +1064,18 @@ export default function Page() {
       isListeningRef.current = false;
     }
     window.speechSynthesis.cancel();
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+    }
     setState("idle");
   };
 
   const handleInterrupt = () => {
     if (state === "speaking") {
       window.speechSynthesis.cancel();
+      if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+      }
       setState("idle");
       if (recognitionRef.current) {
         try {
@@ -641,12 +1122,51 @@ export default function Page() {
     setEditingChatId(null);
   };
 
+  const chatWidthMap = {
+    compact: "w-full lg:w-[380px] flex-1 lg:flex-none lg:h-full rounded-3xl max-w-[420px] lg:max-w-none self-center lg:self-auto",
+    medium: "w-full lg:w-[480px] flex-1 lg:flex-none lg:h-full rounded-3xl max-w-[520px] lg:max-w-none self-center lg:self-auto",
+    wide: "w-full lg:w-[600px] flex-1 lg:flex-none lg:h-full rounded-3xl max-w-[640px] lg:max-w-none self-center lg:self-auto",
+  };
+
+  if (loading) {
+    return (
+      <div className="h-screen w-screen bg-[#020617] flex flex-col items-center justify-center gap-6 select-none overflow-hidden relative">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#0f172a_0%,#020617_70%)] pointer-events-none z-0" />
+        <div className="relative w-48 h-48 z-10 flex items-center justify-center">
+          <NeuralOrb state="thinking" energy={0.5} personality="normal" />
+        </div>
+        <div className="z-10 flex flex-col items-center gap-2">
+          <span className="text-sm font-bold tracking-widest text-cyan-400 uppercase animate-pulse">Initializing BUBU AI</span>
+          <span className="text-xs text-white/40">Securing environment...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LandingPage />;
+  }
+
   return (
     <div
-      className={`flex flex-col h-dvh transition-colors duration-500 overflow-hidden ${
+      className={`flex flex-col h-dvh transition-colors duration-500 overflow-hidden relative ${
         isDark ? "bg-[#020617] text-white" : "bg-[#f8fafc] text-gray-900"
       }`}
     >
+      {/* 🎨 DYNAMIC UI STYLING OVERRIDES */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        :root {
+          --font-custom: "Outfit", system-ui, sans-serif;
+          --glass-bg: rgba(7, 11, 25, 0.55);
+          --glass-blur: 16px;
+          --glass-border: rgba(255, 255, 255, 0.06);
+          --canvas-glow: drop-shadow(0 0 24px rgba(34, 211, 238, 0.25));
+        }
+      `}} />
+
+      {/* 🌌 IMMERSIVE DYNAMIC AURORA GRID BACKGROUND */}
+      <DynamicBackground isDark={isDark} personality={personality} />
+
       {/* 🎧 VOICE MODE OVERLAY */}
       {voiceMode && (
         <VoiceMode
@@ -665,72 +1185,819 @@ export default function Page() {
       )}
 
       {/* 🌐 GLOBAL DASHBOARD HEADER */}
-      <Header
-        isMobile={isMobile}
-        setMobileSidebarOpen={setMobileSidebarOpen}
-        personality={personality}
-        voiceMode={voiceMode}
-        setVoiceMode={triggerVoiceMode}
-        isDark={isDark}
-      />
+      {isMobile ? (
+        <Header
+          isMobile={true}
+          setMobileSidebarOpen={setMobileSidebarOpen}
+          personality={personality}
+          voiceMode={voiceMode}
+          setVoiceMode={triggerVoiceMode}
+          isDark={isDark}
+          ambientPlayerOpen={ambientPlayerOpen}
+          setAmbientPlayerOpen={handleToggleAmbientPlayer}
+          widgetPanelOpen={widgetPanelOpen}
+          setWidgetPanelOpen={handleToggleWidgetPanel}
+          memoryVaultOpen={memoryVaultOpen}
+          setMemoryVaultOpen={handleToggleMemoryVault}
+          affectionScore={affectionScore}
+        />
+      ) : (
+        hudConfig.header.visible && (
+          <div
+            onMouseDown={(e) => startLongPress(e, "header")}
+            onTouchStart={(e) => startLongPress(e, "header")}
+            onMouseMove={moveLongPress}
+            onTouchMove={moveLongPress}
+            onMouseUp={endLongPress}
+            onTouchEnd={endLongPress}
+            style={{
+              position: "absolute",
+              left: `${hudConfig.header.x}%`,
+              top: `${hudConfig.header.y}%`,
+              width: `${hudConfig.header.w}%`,
+              height: `${hudConfig.header.h}%`,
+              transform: `scale(${hudConfig.header.scale})`,
+              transformOrigin: "top left",
+              opacity: hudConfig.header.opacity,
+              zIndex: 30,
+              pointerEvents: unlockedWidgets.header ? "none" : "auto",
+              transition: "transform 0.15s ease-out, opacity 0.15s ease-out, border-color 0.3s ease",
+            }}
+          >
+            <Header
+              isMobile={false}
+              setMobileSidebarOpen={setMobileSidebarOpen}
+              personality={personality}
+              voiceMode={voiceMode}
+              setVoiceMode={triggerVoiceMode}
+              isDark={isDark}
+              ambientPlayerOpen={ambientPlayerOpen}
+              setAmbientPlayerOpen={handleToggleAmbientPlayer}
+              widgetPanelOpen={widgetPanelOpen}
+              setWidgetPanelOpen={handleToggleWidgetPanel}
+              memoryVaultOpen={memoryVaultOpen}
+              setMemoryVaultOpen={handleToggleMemoryVault}
+              affectionScore={affectionScore}
+              className="w-full h-full rounded-2xl border shadow-lg"
+            />
+          </div>
+        )
+      )}
 
       {/* 🚀 MAIN CONTENT BODY */}
-      <main className="flex-1 flex overflow-hidden">
-        {/* 🧾 RESPONSIVE SIDEBAR COMPONENT */}
-        <Sidebar
-          isMobile={isMobile}
-          mobileSidebarOpen={mobileSidebarOpen}
-          setMobileSidebarOpen={setMobileSidebarOpen}
-          isDark={isDark}
-          personality={personality}
-          setPersonality={handleSetPersonality}
-          chats={chats}
-          currentChatId={currentChatId}
-          setCurrentChatId={setCurrentChatId}
-          createNewChat={createNewChat}
-          setVoiceMode={triggerVoiceMode}
-          deleteChat={deleteChat}
-          editingChatId={editingChatId}
-          setEditingChatId={setEditingChatId}
-          editTitle={editTitle}
-          setEditTitle={setEditTitle}
-          saveChatTitle={saveChatTitle}
-        />
-
-        {/* 🤖 MAIN DASHBOARD VIEWPORT */}
-        <section
-          className={`flex-1 relative ${
-            isMobile ? "flex items-center justify-center pt-12 pb-24" : "flex flex-row h-full max-h-full overflow-hidden p-6 gap-6"
-          }`}
-        >
-          {/* Center column animated visualizer (Desktop Only) */}
-          {!isMobile && !voiceMode && (
-            <DesktopVisualizer
-              state={state}
-              energyLevel={energyLevel}
-              personality={personality}
-            />
-          )}
-
-          {/* Conversation Box Drawer */}
-          {!voiceMode && (
-            <ChatPanel
-              isMobile={isMobile}
+      <main 
+        onDoubleClick={handleBackgroundDoubleClick}
+        onTouchStart={handleBackgroundTouchStart}
+        onTouchMove={handleBackgroundTouchMove}
+        onTouchEnd={handleBackgroundTouchEnd}
+        className="flex-1 relative overflow-hidden select-none"
+      >
+        
+        {/* If Mobile, render standard layout */}
+        {isMobile ? (
+          <>
+            {/* 🧾 RESPONSIVE SIDEBAR COMPONENT */}
+            <Sidebar
+              isMobile={true}
+              mobileSidebarOpen={mobileSidebarOpen}
+              setMobileSidebarOpen={setMobileSidebarOpen}
               isDark={isDark}
-              ytVideoQuery={ytVideoQuery}
-              setYtVideoQuery={setYtVideoQuery}
-              chatHistory={chatHistory}
-              themeStyles={themeStyles}
-              isTyping={isTyping}
-              inputText={inputText}
-              setInputText={setInputText}
-              handleSendText={handleSendText}
-              startListening={startListening}
-              chatEndRef={chatEndRef}
+              personality={personality}
+              setPersonality={handleSetPersonality}
+              chats={chats}
+              currentChatId={currentChatId}
+              setCurrentChatId={setCurrentChatId}
+              createNewChat={createNewChat}
+              setVoiceMode={triggerVoiceMode}
+              deleteChat={deleteChat}
+              editingChatId={editingChatId}
+              setEditingChatId={setEditingChatId}
+              editTitle={editTitle}
+              setEditTitle={setEditTitle}
+              saveChatTitle={saveChatTitle}
+              onOpenMemory={() => handleToggleMemoryVault(true)}
+              affectionScore={affectionScore}
             />
-          )}
-        </section>
+
+            {/* 🤖 MOBILE VIEWPORT */}
+            <section className="flex-1 relative flex items-center justify-center pt-12 pb-24">
+              {!voiceMode && (
+                <ChatPanel
+                  isMobile={true}
+                  isDark={isDark}
+                  ytVideoQuery={ytVideoQuery}
+                  setYtVideoQuery={setYtVideoQuery}
+                  chatHistory={chatHistory}
+                  themeStyles={themeStyles}
+                  isTyping={isTyping}
+                  inputText={inputText}
+                  setInputText={setInputText}
+                  handleSendText={handleSendText}
+                  startListening={startListening}
+                  chatEndRef={chatEndRef}
+                  personality={personality}
+                  voiceMode={voiceMode}
+                  setVoiceMode={triggerVoiceMode}
+                  ambientPlayerOpen={ambientPlayerOpen}
+                  setAmbientPlayerOpen={handleToggleAmbientPlayer}
+                />
+              )}
+            </section>
+          </>
+        ) : (
+          /* Desktop / Tablet Custom HUD Floating Layout */
+          <>
+            {/* 🧾 SIDEBAR WIDGET */}
+            {hudConfig.sidebar.visible && (
+              <div
+                onMouseDown={(e) => startLongPress(e, "sidebar")}
+                onTouchStart={(e) => startLongPress(e, "sidebar")}
+                onMouseMove={moveLongPress}
+                onTouchMove={moveLongPress}
+                onMouseUp={endLongPress}
+                onTouchEnd={endLongPress}
+                style={{
+                  position: "absolute",
+                  left: `${hudConfig.sidebar.x}%`,
+                  top: `${hudConfig.sidebar.y}%`,
+                  width: `${hudConfig.sidebar.w}%`,
+                  height: `${hudConfig.sidebar.h}%`,
+                  transform: `scale(${hudConfig.sidebar.scale})`,
+                  transformOrigin: "top left",
+                  opacity: hudConfig.sidebar.opacity,
+                  zIndex: 20,
+                  pointerEvents: unlockedWidgets.sidebar ? "none" : "auto",
+                  transition: "transform 0.15s ease-out, opacity 0.15s ease-out, border-color 0.3s ease",
+                }}
+              >
+                <Sidebar
+                  isMobile={false}
+                  mobileSidebarOpen={mobileSidebarOpen}
+                  setMobileSidebarOpen={setMobileSidebarOpen}
+                  isDark={isDark}
+                  personality={personality}
+                  setPersonality={handleSetPersonality}
+                  chats={chats}
+                  currentChatId={currentChatId}
+                  setCurrentChatId={setCurrentChatId}
+                  createNewChat={createNewChat}
+                  setVoiceMode={triggerVoiceMode}
+                  deleteChat={deleteChat}
+                  editingChatId={editingChatId}
+                  setEditingChatId={setEditingChatId}
+                  editTitle={editTitle}
+                  setEditTitle={setEditTitle}
+                  saveChatTitle={saveChatTitle}
+                  onOpenMemory={() => handleToggleMemoryVault(true)}
+                  affectionScore={affectionScore}
+                  className="w-full h-full rounded-3xl border shadow-lg"
+                />
+              </div>
+            )}
+
+            {/* 💬 CHAT PANEL WIDGET */}
+            {hudConfig.chat.visible && !voiceMode && (
+              <div
+                onMouseDown={(e) => startLongPress(e, "chat")}
+                onTouchStart={(e) => startLongPress(e, "chat")}
+                onMouseMove={moveLongPress}
+                onTouchMove={moveLongPress}
+                onMouseUp={endLongPress}
+                onTouchEnd={endLongPress}
+                style={{
+                  position: "absolute",
+                  left: `${hudConfig.chat.x}%`,
+                  top: `${hudConfig.chat.y}%`,
+                  width: `${hudConfig.chat.w}%`,
+                  height: `${hudConfig.chat.h}%`,
+                  transform: `scale(${hudConfig.chat.scale})`,
+                  transformOrigin: "top left",
+                  opacity: hudConfig.chat.opacity,
+                  zIndex: 20,
+                  pointerEvents: unlockedWidgets.chat ? "none" : "auto",
+                  transition: "transform 0.15s ease-out, opacity 0.15s ease-out, border-color 0.3s ease",
+                }}
+              >
+                <ChatPanel
+                  isMobile={false}
+                  isDark={isDark}
+                  ytVideoQuery={ytVideoQuery}
+                  setYtVideoQuery={setYtVideoQuery}
+                  chatHistory={chatHistory}
+                  themeStyles={themeStyles}
+                  isTyping={isTyping}
+                  inputText={inputText}
+                  setInputText={setInputText}
+                  handleSendText={handleSendText}
+                  startListening={startListening}
+                  chatEndRef={chatEndRef}
+                  personality={personality}
+                  voiceMode={voiceMode}
+                  setVoiceMode={triggerVoiceMode}
+                  ambientPlayerOpen={ambientPlayerOpen}
+                  setAmbientPlayerOpen={handleToggleAmbientPlayer}
+                  className="w-full h-full rounded-3xl border shadow-lg"
+                />
+              </div>
+            )}
+
+            {/* 🪐 AIVATAR VISUALIZER */}
+            {hudConfig.visualizer.visible && !voiceMode && (
+              <div
+                onMouseDown={(e) => startLongPress(e, "visualizer")}
+                onTouchStart={(e) => startLongPress(e, "visualizer")}
+                onMouseMove={moveLongPress}
+                onTouchMove={moveLongPress}
+                onMouseUp={endLongPress}
+                onTouchEnd={endLongPress}
+                style={{
+                  position: "absolute",
+                  left: `${hudConfig.visualizer.x}%`,
+                  top: `${hudConfig.visualizer.y}%`,
+                  width: `${hudConfig.visualizer.w}%`,
+                  height: `${hudConfig.visualizer.h}%`,
+                  transform: `scale(${hudConfig.visualizer.scale})`,
+                  transformOrigin: "top left",
+                  opacity: hudConfig.visualizer.opacity,
+                  zIndex: 10,
+                  pointerEvents: unlockedWidgets.visualizer ? "none" : "auto",
+                  transition: "transform 0.15s ease-out, opacity 0.15s ease-out, border-color 0.3s ease",
+                }}
+              >
+                <DesktopVisualizer
+                  state={state}
+                  energyLevel={energyLevel}
+                  personality={personality}
+                  setPersonality={handleSetPersonality}
+                  glowLevel="soft"
+                  avatarSize="medium"
+                  className="w-full h-full rounded-3xl border border-white/5 custom-glass-panel shadow-lg"
+                />
+              </div>
+            )}
+
+            {/* Interactive Workspace Panel (Desktop HUD-based) */}
+            {!isUnder1280 && !voiceMode && widgetPanelOpen && hudConfig.todo.visible && (
+              <div
+                onMouseDown={(e) => startLongPress(e, "todo")}
+                onTouchStart={(e) => startLongPress(e, "todo")}
+                onMouseMove={moveLongPress}
+                onTouchMove={moveLongPress}
+                onMouseUp={endLongPress}
+                onTouchEnd={endLongPress}
+                style={{
+                  position: "absolute",
+                  left: `${hudConfig.todo.x}%`,
+                  top: `${hudConfig.todo.y}%`,
+                  width: `${hudConfig.todo.w}%`,
+                  height: `${hudConfig.todo.h}%`,
+                  transform: `scale(${hudConfig.todo.scale})`,
+                  transformOrigin: "top left",
+                  opacity: hudConfig.todo.opacity,
+                  zIndex: 25,
+                  pointerEvents: unlockedWidgets.todo ? "none" : "auto",
+                  transition: "transform 0.15s ease-out, opacity 0.15s ease-out, border-color 0.3s ease",
+                }}
+              >
+                <WidgetPanel
+                  isMobile={false}
+                  isOpen={widgetPanelOpen}
+                  onClose={() => setWidgetPanelOpen(false)}
+                  todos={todos}
+                  setTodos={setTodos}
+                  notes={notes}
+                  setNotes={setNotes}
+                  className="w-full h-full"
+                />
+              </div>
+            )}
+
+            {/* Ambient Player (Desktop HUD-based) */}
+            {!isMobile && !voiceMode && ambientPlayerOpen && hudConfig.songs.visible && (
+              <div
+                onMouseDown={(e) => startLongPress(e, "songs")}
+                onTouchStart={(e) => startLongPress(e, "songs")}
+                onMouseMove={moveLongPress}
+                onTouchMove={moveLongPress}
+                onMouseUp={endLongPress}
+                onTouchEnd={endLongPress}
+                style={{
+                  position: "absolute",
+                  left: `${hudConfig.songs.x}%`,
+                  top: `${hudConfig.songs.y}%`,
+                  width: `${hudConfig.songs.w}%`,
+                  height: `${hudConfig.songs.h}%`,
+                  transform: `scale(${hudConfig.songs.scale})`,
+                  transformOrigin: "top left",
+                  opacity: hudConfig.songs.opacity,
+                  zIndex: 30,
+                  pointerEvents: unlockedWidgets.songs ? "none" : "auto",
+                  transition: "transform 0.15s ease-out, opacity 0.15s ease-out, border-color 0.3s ease",
+                }}
+              >
+                <AmbientPlayer
+                  isOpen={ambientPlayerOpen}
+                  onClose={() => setAmbientPlayerOpen(false)}
+                  className="w-full h-full"
+                />
+              </div>
+            )}
+
+            {/* Memory Vault (Desktop HUD-based) */}
+            {!isMobile && !voiceMode && memoryVaultOpen && hudConfig.memory.visible && (
+              <div
+                onMouseDown={(e) => startLongPress(e, "memory")}
+                onTouchStart={(e) => startLongPress(e, "memory")}
+                onMouseMove={moveLongPress}
+                onTouchMove={moveLongPress}
+                onMouseUp={endLongPress}
+                onTouchEnd={endLongPress}
+                style={{
+                  position: "absolute",
+                  left: `${hudConfig.memory.x}%`,
+                  top: `${hudConfig.memory.y}%`,
+                  width: `${hudConfig.memory.w}%`,
+                  height: `${hudConfig.memory.h}%`,
+                  transform: `scale(${hudConfig.memory.scale})`,
+                  transformOrigin: "top left",
+                  opacity: hudConfig.memory.opacity,
+                  zIndex: 35,
+                  pointerEvents: unlockedWidgets.memory ? "none" : "auto",
+                  transition: "transform 0.15s ease-out, opacity 0.15s ease-out, border-color 0.3s ease",
+                }}
+              >
+                <MemoryVault
+                  isOpen={memoryVaultOpen}
+                  onClose={() => setMemoryVaultOpen(false)}
+                  memory={globalMemory}
+                  onSaveMemory={(updated) => {
+                    setGlobalMemory(updated);
+                    localStorage.setItem("bubu_global_memory", JSON.stringify(updated));
+                  }}
+                  className="w-full h-full"
+                />
+              </div>
+            )}
+
+            {/* Floating Quick Action Toggles (Desktop HUD-based) */}
+            {!isMobile && !voiceMode && (
+              <>
+                {hudConfig.todoToggle.visible && (
+                  <button
+                    onClick={(e) => {
+                      if (longPressActiveRef.current) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                      }
+                      handleToggleWidgetPanel(!widgetPanelOpen);
+                    }}
+                    onMouseDown={(e) => startLongPress(e, "todoToggle")}
+                    onTouchStart={(e) => startLongPress(e, "todoToggle")}
+                    onMouseMove={moveLongPress}
+                    onTouchMove={moveLongPress}
+                    onMouseUp={endLongPress}
+                    onTouchEnd={endLongPress}
+                    className={`flex items-center justify-center rounded-full border transition-all active:scale-95 shadow-lg backdrop-blur-md cursor-pointer select-none
+                      ${widgetPanelOpen 
+                        ? "bg-cyan-500/20 border-cyan-500/35 text-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.3)]" 
+                        : "bg-[#090d16]/80 border-white/10 text-white hover:bg-white/10 hover:border-white/20"
+                      }`}
+                    style={{
+                      position: "absolute",
+                      left: `${hudConfig.todoToggle.x}%`,
+                      top: `${hudConfig.todoToggle.y}%`,
+                      width: "48px",
+                      height: "48px",
+                      fontSize: "1.25rem",
+                      transform: `scale(${hudConfig.todoToggle.scale})`,
+                      transformOrigin: "center center",
+                      opacity: hudConfig.todoToggle.opacity,
+                      zIndex: 40,
+                      pointerEvents: unlockedWidgets.todoToggle ? "none" : "auto",
+                      transition: "transform 0.15s ease-out, opacity 0.15s ease-out, border-color 0.3s ease",
+                    }}
+                    title="Workspace Planner (Todo & Notes)"
+                  >
+                    📋
+                  </button>
+                )}
+
+                {hudConfig.songsToggle.visible && (
+                  <button
+                    onClick={(e) => {
+                      if (longPressActiveRef.current) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                      }
+                      handleToggleAmbientPlayer(!ambientPlayerOpen);
+                    }}
+                    onMouseDown={(e) => startLongPress(e, "songsToggle")}
+                    onTouchStart={(e) => startLongPress(e, "songsToggle")}
+                    onMouseMove={moveLongPress}
+                    onTouchMove={moveLongPress}
+                    onMouseUp={endLongPress}
+                    onTouchEnd={endLongPress}
+                    className={`flex items-center justify-center rounded-full border transition-all active:scale-95 shadow-lg backdrop-blur-md cursor-pointer select-none
+                      ${ambientPlayerOpen 
+                        ? "bg-cyan-500/20 border-cyan-500/35 text-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.3)]" 
+                        : "bg-[#090d16]/80 border-white/10 text-white hover:bg-white/10 hover:border-white/20"
+                      }`}
+                    style={{
+                      position: "absolute",
+                      left: `${hudConfig.songsToggle.x}%`,
+                      top: `${hudConfig.songsToggle.y}%`,
+                      width: "48px",
+                      height: "48px",
+                      fontSize: "1.25rem",
+                      transform: `scale(${hudConfig.songsToggle.scale})`,
+                      transformOrigin: "center center",
+                      opacity: hudConfig.songsToggle.opacity,
+                      zIndex: 40,
+                      pointerEvents: unlockedWidgets.songsToggle ? "none" : "auto",
+                      transition: "transform 0.15s ease-out, opacity 0.15s ease-out, border-color 0.3s ease",
+                    }}
+                    title="Ambient Music Player"
+                  >
+                    🎧
+                  </button>
+                )}
+
+                {hudConfig.memoryToggle.visible && (
+                  <button
+                    onClick={(e) => {
+                      if (longPressActiveRef.current) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                      }
+                      handleToggleMemoryVault(!memoryVaultOpen);
+                    }}
+                    onMouseDown={(e) => startLongPress(e, "memoryToggle")}
+                    onTouchStart={(e) => startLongPress(e, "memoryToggle")}
+                    onMouseMove={moveLongPress}
+                    onTouchMove={moveLongPress}
+                    onMouseUp={endLongPress}
+                    onTouchEnd={endLongPress}
+                    className={`flex items-center justify-center rounded-full border transition-all active:scale-95 shadow-lg backdrop-blur-md cursor-pointer select-none
+                      ${memoryVaultOpen 
+                        ? "bg-cyan-500/20 border-cyan-500/35 text-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.3)]" 
+                        : "bg-[#090d16]/80 border-white/10 text-white hover:bg-white/10 hover:border-white/20"
+                      }`}
+                    style={{
+                      position: "absolute",
+                      left: `${hudConfig.memoryToggle.x}%`,
+                      top: `${hudConfig.memoryToggle.y}%`,
+                      width: "48px",
+                      height: "48px",
+                      fontSize: "1.25rem",
+                      transform: `scale(${hudConfig.memoryToggle.scale})`,
+                      transformOrigin: "center center",
+                      opacity: hudConfig.memoryToggle.opacity,
+                      zIndex: 40,
+                      pointerEvents: unlockedWidgets.memoryToggle ? "none" : "auto",
+                      transition: "transform 0.15s ease-out, opacity 0.15s ease-out, border-color 0.3s ease",
+                    }}
+                    title="BUBU Memory Vault"
+                  >
+                    🧠
+                  </button>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {/* ✥ DRAG OVERLAYS (Only visible for unlocked widgets) */}
+        {Object.keys(hudConfig).some(key => unlockedWidgets[key]) && (
+          <div className="absolute inset-0 z-[9990] pointer-events-none">
+            {(Object.keys(hudConfig) as Array<keyof HUDConfig>).map((widget) => {
+              if (widget === "customizerToggle") return null;
+              const cfg = hudConfig[widget] || DEFAULT_HUD_CONFIG[widget];
+              if (!cfg.visible) return null;
+              if (!unlockedWidgets[widget]) return null;
+
+              const isDraggingThis = activeDrag === widget;
+              const isButton = widget.endsWith("Toggle");
+              const label = widgetLabels[widget] || widget;
+
+              const styleProps: React.CSSProperties = isButton 
+                ? {
+                    position: "absolute",
+                    left: `${cfg.x}%`,
+                    top: `${cfg.y}%`,
+                    width: "48px",
+                    height: "48px",
+                    transform: `scale(${cfg.scale})`,
+                    transformOrigin: "center center",
+                  }
+                : {
+                    position: "absolute",
+                    left: `${cfg.x}%`,
+                    top: `${cfg.y}%`,
+                    width: `${cfg.w}%`,
+                    height: `${cfg.h}%`,
+                    transform: `scale(${cfg.scale})`,
+                    transformOrigin: "top left",
+                  };
+
+              return (
+                <div
+                  key={widget}
+                  style={{
+                    ...styleProps,
+                    zIndex: isDraggingThis ? 9995 : 9990,
+                  }}
+                  className="pointer-events-auto group"
+                >
+                  <div 
+                    className={`w-full h-full flex flex-col justify-between cursor-grab active:cursor-grabbing transition-all select-none relative
+                      ${isButton ? "rounded-full p-1" : "rounded-3xl p-4"}
+                      border-2 border-dashed border-cyan-400/40 bg-cyan-950/20 hover:border-cyan-400 hover:bg-cyan-900/30 backdrop-blur-[2px]
+                      ${isDraggingThis ? "opacity-90 border-solid border-cyan-400 bg-cyan-900/45 scale-[1.02] shadow-[0_0_20px_rgba(34,211,238,0.4)]" : ""}
+                    `}
+                    onMouseDown={(e) => startDrag(e, widget)}
+                    onTouchStart={(e) => startDrag(e, widget)}
+                  >
+                    {/* Hide Component Button (Eye icon) in top right */}
+                    {!isButton && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateWidgetConfig(widget, { visible: false });
+                        }}
+                        className="absolute top-2 right-2 p-1 rounded-md bg-black/60 hover:bg-red-500/20 border border-white/10 hover:border-red-500/30 text-white/70 hover:text-red-400 transition cursor-pointer z-[100]"
+                        title={`Hide ${label}`}
+                      >
+                        👁️
+                      </button>
+                    )}
+
+                    {!isButton ? (
+                      <>
+                        {/* Top widget tag */}
+                        <div className="flex items-center justify-between pointer-events-none bg-black/60 px-2.5 py-1 rounded-lg border border-white/5 select-none">
+                          <span className="text-[9px] font-bold text-cyan-400 tracking-wider uppercase truncate max-w-[120px]">
+                            {label}
+                          </span>
+                          <span className="text-[8px] text-white/50 font-mono">
+                            {cfg.x}%, {cfg.y}%
+                          </span>
+                        </div>
+
+                        {/* Center Drag Icon */}
+                        <div className="flex-1 flex flex-col items-center justify-center pointer-events-none text-cyan-400/60 select-none">
+                          <span className="text-2xl">✥</span>
+                          <span className="text-[8px] uppercase tracking-widest font-semibold mt-1">Drag to Move</span>
+                        </div>
+
+                        {/* Contextual control panel inside overlay */}
+                        <div 
+                          className="mt-2 bg-black/80 border border-white/10 p-1.5 rounded-xl flex items-center justify-between gap-2 opacity-60 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto"
+                          onMouseDown={(e) => e.stopPropagation()} // Prevent drag on controls
+                          onTouchStart={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => {
+                              setUnlockedWidgets((prev) => ({ ...prev, [widget]: false }));
+                            }}
+                            className="py-0.5 px-2 rounded bg-cyan-500/20 border border-cyan-500/35 hover:bg-cyan-500/40 text-[9px] font-bold text-cyan-400 flex items-center gap-1 cursor-pointer select-none transition-all active:scale-95"
+                            title="Lock layout"
+                          >
+                            🔒 Lock
+                          </button>
+
+                          <div className="w-[1px] h-3 bg-white/15" />
+
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[8px] font-bold text-white/50 uppercase">Scale</span>
+                            <button
+                              onClick={() => updateWidgetConfig(widget, { scale: Math.max(0.5, cfg.scale - 0.05) })}
+                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <span className="text-[8px] font-mono font-bold text-cyan-400 w-6 text-center">
+                              {Math.round(cfg.scale * 100)}%
+                            </span>
+                            <button
+                              onClick={() => updateWidgetConfig(widget, { scale: Math.min(1.5, cfg.scale + 0.05) })}
+                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <div className="w-[1px] h-3 bg-white/15" />
+
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[8px] font-bold text-white/50 uppercase">Opacity</span>
+                            <button
+                              onClick={() => updateWidgetConfig(widget, { opacity: Math.max(0.1, cfg.opacity - 0.1) })}
+                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <span className="text-[8px] font-mono font-bold text-cyan-400 w-6 text-center">
+                              {Math.round(cfg.opacity * 100)}%
+                            </span>
+                            <button
+                              onClick={() => updateWidgetConfig(widget, { opacity: Math.min(1.0, cfg.opacity + 0.1) })}
+                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      // Button Toggle Specific mini-overlay
+                      <div className="w-full h-full flex flex-col items-center justify-center relative">
+                        <span className="text-sm">
+                          {widget === "todoToggle" ? "📋" : widget === "songsToggle" ? "🎧" : "🧠"}
+                        </span>
+                        
+                        {/* Hover micro controls for buttons (Hide / Scale / Lock) */}
+                        <div 
+                          className="absolute -bottom-7 bg-black/90 border border-cyan-500/30 py-0.5 px-1 rounded-md flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto shadow-md"
+                          onMouseDown={(e) => e.stopPropagation()} 
+                          onTouchStart={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => {
+                              setUnlockedWidgets((prev) => ({ ...prev, [widget]: false }));
+                            }}
+                            className="w-3.5 h-3.5 rounded bg-cyan-500/20 text-[7px] flex items-center justify-center text-cyan-400 hover:bg-cyan-500/35 cursor-pointer font-bold"
+                            title="Lock Position"
+                          >
+                            🔒
+                          </button>
+                          <div className="w-[1px] h-2 bg-white/15" />
+                          <button
+                            onClick={() => updateWidgetConfig(widget, { scale: Math.max(0.6, cfg.scale - 0.1) })}
+                            className="w-3.5 h-3.5 rounded bg-white/5 text-[8px] font-bold flex items-center justify-center text-white hover:bg-white/10 cursor-pointer"
+                            title="Decrease Scale"
+                          >
+                            -
+                          </button>
+                          <span className="text-[7px] text-cyan-400 font-mono font-bold">
+                            {Math.round(cfg.scale * 100)}%
+                          </span>
+                          <button
+                            onClick={() => updateWidgetConfig(widget, { scale: Math.min(1.4, cfg.scale + 0.1) })}
+                            className="w-3.5 h-3.5 rounded bg-white/5 text-[8px] font-bold flex items-center justify-center text-white hover:bg-white/10 cursor-pointer"
+                            title="Increase Scale"
+                          >
+                            +
+                          </button>
+                          <div className="w-[1px] h-2 bg-white/15" />
+                          <button
+                            onClick={() => updateWidgetConfig(widget, { visible: false })}
+                            className="w-3.5 h-3.5 rounded bg-red-500/20 text-[7px] flex items-center justify-center text-red-400 hover:bg-red-500/30 cursor-pointer"
+                            title="Hide Button"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
       </main>
+
+      {/* Context Menu for locking/unlocking/hiding widgets */}
+      {contextMenu && contextMenu.widget !== ("background" as any) && (
+        <div
+          className="fixed z-[10000] bg-[#080d1a]/95 border border-cyan-500/30 rounded-xl p-1.5 shadow-[0_10px_30px_rgba(6,182,212,0.35)] backdrop-blur-md flex flex-col gap-1 text-xs text-white min-w-[140px]"
+          style={{
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+            transform: "translate(-50%, -100%)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-2.5 py-1 text-[9px] font-bold text-white/40 uppercase tracking-wider select-none border-b border-white/5 pb-1.5 mb-1">
+            {widgetLabels[contextMenu.widget] || contextMenu.widget}
+          </div>
+          <button
+            onClick={() => {
+              const isCurrentlyUnlocked = unlockedWidgets[contextMenu.widget];
+              setUnlockedWidgets((prev) => ({
+                ...prev,
+                [contextMenu.widget]: !isCurrentlyUnlocked,
+              }));
+              setContextMenu(null);
+            }}
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-cyan-500/20 text-cyan-400 font-semibold transition cursor-pointer select-none text-left"
+          >
+            {unlockedWidgets[contextMenu.widget] ? "🔒 Lock Position" : "🔓 Unlock Position"}
+          </button>
+          {!unlockedWidgets[contextMenu.widget] && (
+            <button
+              onClick={() => {
+                updateWidgetConfig(contextMenu.widget, { visible: false });
+                setContextMenu(null);
+              }}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-red-500/20 text-red-400 font-semibold transition cursor-pointer select-none text-left"
+            >
+              👁️‍🌫️ Hide Component
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Background Context Menu */}
+      {contextMenu && contextMenu.widget === ("background" as any) && (
+        <div
+          className="fixed z-[10000] bg-[#080d1a]/95 border border-cyan-500/30 rounded-xl p-1.5 shadow-[0_10px_30px_rgba(6,182,212,0.35)] backdrop-blur-md flex flex-col gap-1 text-xs text-white min-w-[165px]"
+          style={{
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+            transform: "translate(-50%, -100%)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-2.5 py-1 text-[9px] font-bold text-white/40 uppercase tracking-wider select-none border-b border-white/5 pb-1.5 mb-1">
+            Desktop Actions
+          </div>
+          
+          {Object.keys(hudConfig).some(key => key !== "customizerToggle" && !hudConfig[key as keyof HUDConfig].visible) ? (
+            <>
+              <div className="px-2.5 py-0.5 text-[8px] font-bold text-cyan-400/70 uppercase tracking-widest select-none">
+                Restore Components:
+              </div>
+              {(Object.keys(hudConfig) as Array<keyof HUDConfig>).map((key) => {
+                if (key === "customizerToggle" || hudConfig[key].visible) return null;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      updateWidgetConfig(key, { visible: true });
+                      setContextMenu(null);
+                    }}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-cyan-500/20 text-white font-medium transition cursor-pointer select-none text-left text-[11px]"
+                  >
+                    👁️ Show {widgetLabels[key] || key}
+                  </button>
+                );
+              })}
+              <div className="h-[1px] bg-white/5 my-1" />
+            </>
+          ) : null}
+
+          <button
+            onClick={() => {
+              setHudConfig(DEFAULT_HUD_CONFIG);
+              localStorage.setItem("bubu_hud_config", JSON.stringify(DEFAULT_HUD_CONFIG));
+              setUnlockedWidgets({});
+              setContextMenu(null);
+            }}
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-red-500/20 text-red-400 font-semibold transition cursor-pointer select-none text-left"
+          >
+            🔄 Reset Layout Default
+          </button>
+        </div>
+      )}
+
+      {/* 🧠 MEMORY VAULT MODAL (Mobile or voiceMode fallback) */}
+      {(isMobile || voiceMode) && memoryVaultOpen && (
+        <MemoryVault
+          isOpen={memoryVaultOpen}
+          onClose={() => setMemoryVaultOpen(false)}
+          memory={globalMemory}
+          onSaveMemory={(updated) => {
+            setGlobalMemory(updated);
+            localStorage.setItem("bubu_global_memory", JSON.stringify(updated));
+          }}
+        />
+      )}
+
+      {/* 🎵 AMBIENT MUSIC PLAYER (Mobile fallback) */}
+      {isMobile && ambientPlayerOpen && (
+        <AmbientPlayer
+          isOpen={ambientPlayerOpen}
+          onClose={() => setAmbientPlayerOpen(false)}
+        />
+      )}
+
+      {/* 📋 WORKSPACE WIDGET PANEL (Drawer overlay for screen widths < 1280px or mobile) */}
+      {(isUnder1280 || isMobile) && widgetPanelOpen && (
+        <WidgetPanel
+          isMobile={true}
+          isOpen={widgetPanelOpen}
+          onClose={() => setWidgetPanelOpen(false)}
+          todos={todos}
+          setTodos={setTodos}
+          notes={notes}
+          setNotes={setNotes}
+        />
+      )}
     </div>
   );
 }

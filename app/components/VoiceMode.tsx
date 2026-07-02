@@ -261,7 +261,7 @@ export default function VoiceMode({
           if (callState === "active") onInterrupt();
         }}
         className={`relative flex-1 flex flex-col items-center justify-center z-10 px-4 select-none transition-all duration-300 ${
-          callState === "active" ? "cursor-pointer active:scale-95" : ""
+          callState === "active" ? "cursor-pointer active:scale-95 pb-28" : ""
         }`}
         title={callState === "active" ? "Tap to interrupt BUBU" : undefined}
       >
@@ -293,8 +293,8 @@ export default function VoiceMode({
 
       {/* SUBTITLE DISPLAY (Only when active) */}
       {callState === "active" && (
-        <div className="px-8 text-center min-h-[5rem] z-10 flex flex-col items-center justify-center gap-1">
-          <p className="text-base text-slate-200 max-w-md mx-auto italic font-medium drop-shadow-md">
+        <div className="absolute bottom-32 left-0 right-0 px-8 text-center min-h-[5rem] z-10 flex flex-col items-center justify-center gap-1 pointer-events-none">
+          <p className="text-base text-slate-200 max-w-md mx-auto italic font-medium drop-shadow-md pointer-events-auto max-h-28 overflow-y-auto pr-1 glass-scrollbar">
             {state === "listening" && "Listening..."}
             {state === "thinking" && "Thinking..."}
             {state === "speaking" && (subtitle || "Speaking...")}
