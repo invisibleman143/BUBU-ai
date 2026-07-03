@@ -66,6 +66,24 @@ const bubbleThemeStyles: Record<
   },
 };
 
+const accentTextClass: Record<Personality, string> = {
+  normal: "text-cyan-400 hover:text-cyan-300",
+  romantic: "text-pink-400 hover:text-pink-300",
+  caring: "text-emerald-400 hover:text-emerald-300",
+  playful: "text-yellow-400 hover:text-yellow-300",
+  angry: "text-red-400 hover:text-red-300",
+  command: "text-violet-400 hover:text-violet-300",
+};
+
+const accentHoverBgClass: Record<Personality, string> = {
+  normal: "hover:bg-cyan-500/10 hover:border-cyan-400/50",
+  romantic: "hover:bg-pink-500/10 hover:border-pink-400/50",
+  caring: "hover:bg-emerald-500/10 hover:border-emerald-400/50",
+  playful: "hover:bg-yellow-500/10 hover:border-yellow-400/50",
+  angry: "hover:bg-red-500/10 hover:border-red-400/50",
+  command: "hover:bg-violet-500/10 hover:border-violet-400/50",
+};
+
 export default function ChatPanel({
   isMobile,
   isDark,
@@ -209,13 +227,16 @@ export default function ChatPanel({
           <button
             onClick={() => setVoiceMode?.(true)}
             className={`w-9 h-9 rounded-xl border text-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center shadow-md backdrop-blur-md flex-shrink-0
+              ${themeStyles.border} ${accentTextClass[personality]} ${accentHoverBgClass[personality]}
               ${isDark 
-                ? "bg-white/5 border-white/10 text-white hover:bg-white/10" 
-                : "bg-black/5 border-black/10 text-black hover:bg-black/10"
+                ? "bg-white/5" 
+                : "bg-black/5"
               }`}
             title="Call BUBU (Voice Mode)"
           >
-            📞
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6.62 10.79c1.44 2.83 3.76 5.15 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
+            </svg>
           </button>
         </div>
 
