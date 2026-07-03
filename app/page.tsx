@@ -1767,8 +1767,8 @@ export default function Page() {
                     position: "absolute",
                     left: `${hudConfig.todoToggle.x}%`,
                     top: `${hudConfig.todoToggle.y}%`,
-                    width: "48px",
-                    height: "48px",
+                    width: `${hudConfig.todoToggle.w}%`,
+                    height: `${hudConfig.todoToggle.h}%`,
                     fontSize: "1.25rem",
                     transform: `scale(${hudConfig.todoToggle.scale})`,
                     transformOrigin: "center center",
@@ -1809,8 +1809,8 @@ export default function Page() {
                     position: "absolute",
                     left: `${hudConfig.songsToggle.x}%`,
                     top: `${hudConfig.songsToggle.y}%`,
-                    width: "48px",
-                    height: "48px",
+                    width: `${hudConfig.songsToggle.w}%`,
+                    height: `${hudConfig.songsToggle.h}%`,
                     fontSize: "1.25rem",
                     transform: `scale(${hudConfig.songsToggle.scale})`,
                     transformOrigin: "center center",
@@ -1851,8 +1851,8 @@ export default function Page() {
                     position: "absolute",
                     left: `${hudConfig.memoryToggle.x}%`,
                     top: `${hudConfig.memoryToggle.y}%`,
-                    width: "48px",
-                    height: "48px",
+                    width: `${hudConfig.memoryToggle.w}%`,
+                    height: `${hudConfig.memoryToggle.h}%`,
                     fontSize: "1.25rem",
                     transform: `scale(${hudConfig.memoryToggle.scale})`,
                     transformOrigin: "center center",
@@ -1893,8 +1893,8 @@ export default function Page() {
                     position: "absolute",
                     left: `${cfg.x}%`,
                     top: `${cfg.y}%`,
-                    width: "48px",
-                    height: "48px",
+                    width: `${cfg.w}%`,
+                    height: `${cfg.h}%`,
                     transform: `scale(${cfg.scale})`,
                     transformOrigin: "center center",
                   }
@@ -2011,6 +2011,48 @@ export default function Page() {
                           <div className="w-[1px] h-3 bg-white/10" />
 
                           <div className="flex items-center gap-1">
+                            <span className="text-[9px] text-white/50 cursor-default" title="Adjust Width">↔️</span>
+                            <button
+                              onClick={() => updateWidgetConfig(widget, { w: Math.max(5, cfg.w - 2) })}
+                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
+                            >
+                              -
+                            </button>
+                            <span className="text-[8px] font-mono font-bold text-cyan-400 w-7 text-center">
+                              {cfg.w}%
+                            </span>
+                            <button
+                              onClick={() => updateWidgetConfig(widget, { w: Math.min(100, cfg.w + 2) })}
+                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <div className="w-[1px] h-3 bg-white/10" />
+
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] text-white/50 cursor-default" title="Adjust Height">↕️</span>
+                            <button
+                              onClick={() => updateWidgetConfig(widget, { h: Math.max(5, cfg.h - 2) })}
+                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
+                            >
+                              -
+                            </button>
+                            <span className="text-[8px] font-mono font-bold text-cyan-400 w-7 text-center">
+                              {cfg.h}%
+                            </span>
+                            <button
+                              onClick={() => updateWidgetConfig(widget, { h: Math.min(100, cfg.h + 2) })}
+                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <div className="w-[1px] h-3 bg-white/10" />
+
+                          <div className="flex items-center gap-1">
                             <span className="text-[9px] text-white/50 cursor-default" title="Adjust Opacity">🌓</span>
                             <button
                               onClick={() => updateWidgetConfig(widget, { opacity: Math.max(0.1, cfg.opacity - 0.1) })}
@@ -2069,6 +2111,42 @@ export default function Page() {
                             title="Increase Scale"
                           >
                             +
+                          </button>
+                          <div className="w-[1px] h-2 bg-white/15" />
+                          <button
+                            onClick={() => updateWidgetConfig(widget, { w: Math.max(1, cfg.w - 1) })}
+                            className="w-3.5 h-3.5 rounded bg-white/5 text-[8px] font-bold flex items-center justify-center text-white hover:bg-white/10 cursor-pointer"
+                            title="Decrease Width"
+                          >
+                            w-
+                          </button>
+                          <span className="text-[7px] text-cyan-400 font-mono font-bold">
+                            {cfg.w}%
+                          </span>
+                          <button
+                            onClick={() => updateWidgetConfig(widget, { w: Math.min(30, cfg.w + 1) })}
+                            className="w-3.5 h-3.5 rounded bg-white/5 text-[8px] font-bold flex items-center justify-center text-white hover:bg-white/10 cursor-pointer"
+                            title="Increase Width"
+                          >
+                            w+
+                          </button>
+                          <div className="w-[1px] h-2 bg-white/15" />
+                          <button
+                            onClick={() => updateWidgetConfig(widget, { h: Math.max(1, cfg.h - 1) })}
+                            className="w-3.5 h-3.5 rounded bg-white/5 text-[8px] font-bold flex items-center justify-center text-white hover:bg-white/10 cursor-pointer"
+                            title="Decrease Height"
+                          >
+                            h-
+                          </button>
+                          <span className="text-[7px] text-cyan-400 font-mono font-bold">
+                            {cfg.h}%
+                          </span>
+                          <button
+                            onClick={() => updateWidgetConfig(widget, { h: Math.min(30, cfg.h + 1) })}
+                            className="w-3.5 h-3.5 rounded bg-white/5 text-[8px] font-bold flex items-center justify-center text-white hover:bg-white/10 cursor-pointer"
+                            title="Increase Height"
+                          >
+                            h+
                           </button>
                           <div className="w-[1px] h-2 bg-white/15" />
                           <button
