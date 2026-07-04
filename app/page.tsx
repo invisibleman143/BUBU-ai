@@ -1029,19 +1029,27 @@ export default function Page() {
     let rawReply = replyText || "";
     let sentimentShift = 0;
     
-    // Extract sentiment score if present in any format
-    const sentimentMatch = rawReply.match(/<sentiment>\s*([\+\-]?\d+)\s*<\/sentiment>/i) || 
-                           rawReply.match(/([\+\-]?\d+)\s*<\/sentiment>/i);
+    // Extract sentiment score if present in any format (e.g., <sentiment>+1</sentiment>, [sentiment: +1], etc.)
+    const sentimentMatch = 
+      rawReply.match(/<sentiment>\s*([\+\-]?\d+)\s*<\/sentiment>/i) || 
+      rawReply.match(/\[sentiment:\s*([\+\-]?\d+)\s*\]/i) ||
+      rawReply.match(/\(sentiment:\s*([\+\-]?\d+)\s*\)/i) ||
+      rawReply.match(/sentiment:\s*([\+\-]?\d+)/i) ||
+      rawReply.match(/([\+\-]?\d+)\s*<\/sentiment>/i);
+
     if (sentimentMatch) {
       sentimentShift = parseInt(sentimentMatch[1], 10);
     }
 
-    // Clean up all tags, stray tags, and trailing numbers before the tags
+    // Clean up all possible sentiment tag variations
     rawReply = rawReply
-      .replace(/<sentiment>[\+\-]?\d+<\/sentiment>/gi, "")
-      .replace(/[\+\-]?\d+\s*<\/sentiment>/gi, "")
+      .replace(/<sentiment>[\s\S]*?<\/sentiment>/gi, "")
+      .replace(/\[sentiment:[\s\S]*?\]/gi, "")
+      .replace(/\(sentiment:[\s\S]*?\)/gi, "")
+      .replace(/sentiment:\s*[\+\-]?\d+/gi, "")
       .replace(/<\/sentiment>/gi, "")
       .replace(/<sentiment>/gi, "")
+      .replace(/\s*[\+\-]\d+$/g, "")
       .trim();
 
     return { cleanReply: rawReply, sentimentShift };
@@ -1094,7 +1102,9 @@ export default function Page() {
 
       if (data?.action === "open") {
         const speakText = data.speak || "Opening website...";
-        typeAIMessage(speakText);
+        const { cleanReply, sentimentShift } = parseReplyAndSentiment(speakText);
+        updateAffection(sentimentShift);
+        typeAIMessage(cleanReply);
         handleCommand(data);
         return;
       }
