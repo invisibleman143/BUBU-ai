@@ -372,8 +372,15 @@ export default function Page() {
     const dxPercent = (dx / window.innerWidth) * 100;
     const dyPercent = (dy / window.innerHeight) * 100;
 
-    let newX = Math.max(0, Math.min(98, dragStartRef.current.startX + dxPercent));
-    let newY = Math.max(0, Math.min(95, dragStartRef.current.startY + dyPercent));
+    const mobile = isMobileRef.current;
+    const defaultConfig = mobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
+    const currentHUD = hudConfigRef.current;
+    const currentDragCfg = currentHUD[currentActiveDrag as keyof HUDConfig] || defaultConfig[currentActiveDrag as keyof HUDConfig];
+    const w = currentDragCfg.w;
+    const h = currentDragCfg.h;
+
+    let newX = Math.max(0, Math.min(100 - w, dragStartRef.current.startX + dxPercent));
+    let newY = Math.max(0, Math.min(100 - h, dragStartRef.current.startY + dyPercent));
 
     newX = Math.round(newX);
     newY = Math.round(newY);
@@ -384,10 +391,6 @@ export default function Page() {
     if (Math.abs(newY - 50) <= 1.5) {
       newY = 50;
     }
-
-    const mobile = isMobileRef.current;
-    const defaultConfig = mobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
-    const currentHUD = hudConfigRef.current;
     for (const key of Object.keys(currentHUD)) {
       if (key === currentActiveDrag) continue;
       const cfg = currentHUD[key as keyof HUDConfig] || defaultConfig[key as keyof HUDConfig];
@@ -441,11 +444,35 @@ export default function Page() {
   const updateWidgetConfig = (widget: keyof HUDConfig, updates: Partial<HUDComponentConfig>) => {
     const defaultConfig = isMobile ? DEFAULT_MOBILE_HUD_CONFIG : DEFAULT_HUD_CONFIG;
     const targetConfig = hudConfig[widget] || defaultConfig[widget];
+
+    let newX = updates.x !== undefined ? updates.x : targetConfig.x;
+    let newY = updates.y !== undefined ? updates.y : targetConfig.y;
+    let newW = updates.w !== undefined ? updates.w : targetConfig.w;
+    let newH = updates.h !== undefined ? updates.h : targetConfig.h;
+
+    // Enforce limits on width and height
+    newW = Math.max(5, Math.min(100, newW));
+    newH = Math.max(5, Math.min(100, newH));
+
+    // Enforce viewport boundaries on x and y
+    if (newX + newW > 100) {
+      newX = Math.max(0, 100 - newW);
+    }
+    if (newY + newH > 100) {
+      newY = Math.max(0, 100 - newH);
+    }
+    newX = Math.max(0, newX);
+    newY = Math.max(0, newY);
+
     const updated = {
       ...hudConfig,
       [widget]: {
         ...targetConfig,
         ...updates,
+        x: newX,
+        y: newY,
+        w: newW,
+        h: newH,
       },
     };
     setHudConfig(updated);
@@ -735,8 +762,10 @@ export default function Page() {
     const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
 
     // Only scroll down if user sent a message, or is already near the bottom of the chat
-    if (lastIsUser || distanceFromBottom < 180) {
-      anchor.scrollIntoView({ behavior: "smooth" });
+    if (lastIsUser) {
+      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+    } else if (distanceFromBottom < 180) {
+      container.scrollTop = container.scrollHeight;
     }
   }, [chatHistory, isTyping]);
 
