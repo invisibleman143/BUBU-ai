@@ -748,6 +748,36 @@ export default function Page() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  // Manage visual viewport to handle mobile keyboards without shifting layout
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+
+    const handleVisualViewportChange = () => {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      
+      document.documentElement.style.setProperty(
+        "--visual-viewport-height",
+        `${vv.height}px`
+      );
+      document.documentElement.style.setProperty(
+        "--visual-viewport-offsetTop",
+        `${vv.offsetTop}px`
+      );
+    };
+
+    window.visualViewport.addEventListener("resize", handleVisualViewportChange);
+    window.visualViewport.addEventListener("scroll", handleVisualViewportChange);
+    
+    // Initial execution
+    handleVisualViewportChange();
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", handleVisualViewportChange);
+      window.visualViewport?.removeEventListener("scroll", handleVisualViewportChange);
+    };
+  }, []);
+
   // Sync state scrolling (Smart Auto-Scroll)
   useEffect(() => {
     const anchor = chatEndRef.current;
@@ -1392,9 +1422,13 @@ export default function Page() {
 
   return (
     <div
-      className={`flex flex-col h-dvh transition-colors duration-500 overflow-hidden relative ${
+      className={`flex flex-col transition-colors duration-500 overflow-hidden relative ${
         isDark ? "bg-[#020617] text-white" : "bg-[#f8fafc] text-gray-900"
       }`}
+      style={{
+        height: "var(--visual-viewport-height, 100dvh)",
+        transform: "translateY(var(--visual-viewport-offsetTop, 0px))",
+      }}
     >
       {/* 🎨 DYNAMIC UI STYLING OVERRIDES */}
       <style dangerouslySetInnerHTML={{ __html: `
@@ -1598,8 +1632,15 @@ export default function Page() {
                 left: `${hudConfig.chat.x}%`,
                 top: `${hudConfig.chat.y}%`,
                 width: `${hudConfig.chat.w}%`,
-                height: `${hudConfig.chat.h}%`,
-                transform: `scale(${hudConfig.chat.scale})`,
+                height: isMobile && !isCustomizing 
+                  ? "auto" 
+                  : `${hudConfig.chat.h}%`,
+                bottom: isMobile && !isCustomizing 
+                  ? `${100 - (hudConfig.chat.y + hudConfig.chat.h)}%` 
+                  : undefined,
+                transform: isMobile && !isCustomizing 
+                  ? "none" 
+                  : `scale(${hudConfig.chat.scale})`,
                 transformOrigin: "top left",
                 opacity: hudConfig.chat.opacity,
                 zIndex: 20,
