@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import NeuralOrb from "./NeuralOrb";
@@ -54,6 +54,18 @@ export default function LandingPage() {
 
   const [isLogin, setIsLogin] = useState(true);
   const [selectedPers, setSelectedPers] = useState<Personality>("normal");
+
+  useEffect(() => {
+    // Enable scrolling when landing page is mounted
+    document.body.style.overflow = "auto";
+    document.documentElement.style.overflow = "auto";
+
+    return () => {
+      // Re-enable overflow hidden when landing page is unmounted (user logged in)
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    };
+  }, []);
 
   // Form Fields
   const [email, setEmail] = useState("");
