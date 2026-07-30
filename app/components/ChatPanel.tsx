@@ -108,7 +108,7 @@ export default function ChatPanel({
 }: ChatPanelProps & { widthClass?: string; style?: React.CSSProperties; className?: string }) {
   return (
     <div
-      className={`flex flex-col border flex-shrink-0 custom-glass-panel ${
+      className={`flex flex-col border flex-shrink-0 custom-glass-panel overflow-hidden max-w-full box-border ${
         isMobile
           ? "fixed inset-x-0 bottom-0 top-16 rounded-none pb-24"
           : className || widthClass || "w-full lg:w-[440px] flex-1 lg:flex-none lg:h-full rounded-3xl max-w-[520px] lg:max-w-none self-center lg:self-auto"
@@ -116,18 +116,18 @@ export default function ChatPanel({
       style={style}
     >
       {/* HEADER */}
-      <div className="px-5 py-4 border-b border-white/10 opacity-70 font-semibold text-sm tracking-wide text-white/95">
+      <div className="px-5 py-4 border-b border-white/10 opacity-70 font-semibold text-sm tracking-wide text-white/95 flex-shrink-0 truncate">
         Conversation Thread
       </div>
 
       {/* MESSAGES LIST */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 glass-scrollbar">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 glass-scrollbar min-w-0">
         {/* 🎧 YOUTUBE AUTO-PLAY EMBED */}
         {ytVideoQuery && (
           <div className="mb-4 rounded-xl overflow-hidden border border-white/10 bg-black/30">
-            <p className="text-[10px] opacity-75 px-3 py-1.5 flex items-center justify-between border-b border-white/5">
+            <p className="text-[10px] opacity-75 px-3 py-1.5 flex items-center justify-between border-b border-white/5 truncate">
               <span>▶️ Click video to start playback</span>
-              <span className="font-mono text-cyan-400 font-semibold">{ytVideoQuery}</span>
+              <span className="font-mono text-cyan-400 font-semibold truncate ml-2">{ytVideoQuery}</span>
             </p>
 
             <div className="responsive-yt">
@@ -215,7 +215,7 @@ export default function ChatPanel({
 
       {/* INPUT BAR */}
       <div
-        className={`p-3 border-t border-white/10 flex gap-2 items-center ${
+        className={`p-3 border-t border-white/10 flex gap-2 items-center w-full min-w-0 box-border overflow-hidden flex-shrink-0 ${
           isMobile
             ? "fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl pb-safe z-50"
             : ""
@@ -245,12 +245,12 @@ export default function ChatPanel({
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSendText()}
           placeholder="Type a message…"
-          className="flex-1 px-4 py-2 rounded-xl bg-white/5 outline-none text-sm text-white placeholder-white/40 border border-white/10 focus:border-cyan-400/30 transition-colors"
+          className="flex-1 min-w-0 w-0 px-4 py-2 rounded-xl bg-white/5 outline-none text-sm text-white placeholder-white/40 border border-white/10 focus:border-cyan-400/30 transition-colors"
         />
 
         <button
           onClick={handleSendText}
-          className={`px-4 py-2 rounded-xl font-semibold text-black transition-transform active:scale-95 hover:scale-[1.03] cursor-pointer ${themeStyles.userBubble}`}
+          className={`px-4 py-2 rounded-xl font-semibold text-black transition-transform active:scale-95 hover:scale-[1.03] cursor-pointer flex-shrink-0 flex items-center justify-center min-w-[40px] ${themeStyles.userBubble}`}
         >
           ➤
         </button>
