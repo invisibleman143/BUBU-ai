@@ -305,6 +305,181 @@ export default function VoiceMode({
               (Tap screen to interrupt)
             </span>
           )}
+        </di  const [keypadOpen, setKeypadOpen] = useState(false);
+  const [dialedDigits, setDialedDigits] = useState("");
+  const [activeActionLabel, setActiveActionLabel] = useState("");
+
+  // Web Audio API tone generator for DTMF / keypad sounds
+  const playTone = (freq1: number, freq2: number = 0) => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc1 = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(freq1, ctx.currentTime);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+
+      osc1.connect(gain);
+      gain.connect(ctx.destination);
+      osc1.start();
+      osc1.stop(ctx.currentTime + 0.15);
+
+      if (freq2 > 0) {
+        const osc2 = ctx.createOscillator();
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(freq2, ctx.currentTime);
+        osc2.connect(gain);
+        osc2.start();
+        osc2.stop(ctx.currentTime + 0.15);
+      }
+    } catch {
+      // Audio context fallback
+    }
+  };
+
+  const keypadActions: Record<string, { label: string; prompt: string; freq: [number, number] }> = {
+    "1": { label: "Sing a Song 🎵", prompt: "Can you sing a short song for me?", freq: [697, 1209] },
+    "2": { label: "Tell a Secret 🤫", prompt: "Tell me an intriguing secret or confession.", freq: [697, 1336] },
+    "3": { label: "Romantic Story 💖", prompt: "Tell me a sweet romantic short story.", freq: [697, 1477] },
+    "4": { label: "Tell a Joke 🎭", prompt: "Tell me a funny and witty joke!", freq: [770, 1209] },
+    "5": { label: "Change Mood 🔥", prompt: "Switch your personality mood to something exciting!", freq: [770, 1336] },
+    "6": { label: "Motivate Me 💪", prompt: "Give me an inspiring motivational speech!", freq: [770, 1477] },
+    "7": { label: "Deep Thought 🧠", prompt: "Share a deep philosophical question or thought.", freq: [852, 1209] },
+    "8": { label: "Cosmic Trivia 🌌", prompt: "Tell me a mind-blowing space or science fact.", freq: [852, 1336] },
+    "9": { label: "Relaxation Guide 🧘", prompt: "Guide me through a quick 20-second breathing exercise.", freq: [852, 1477] },
+    "*": { label: "Clear Input 🧹", prompt: "", freq: [941, 1209] },
+    "0": { label: "Surprising Fact ❓", prompt: "Tell me an unexpected surprising fact!", freq: [941, 1336] },
+    "#": { label: "Call Status 📡", prompt: "Report system diagnostics and status.", freq: [941, 1477] },
+  };
+
+  const handleKeyPress = (key: string) => {
+    const action = keypadActions[key];
+    if (action) {
+      playTone(action.freq[0], action.freq[1]);
+      if (key === "*") {
+        setDialedDigits("");
+        setActiveActionLabel("");
+        return;
+      }
+      setDialedDigits((prev) => (prev + key).slice(-8));
+      setActiveActionLabel(action.label);
+      if (action.prompt && onMicClick) {
+        // Send key command to BUBU
+        setTimeout(() => {
+          onMicClick();
+        }, 150);
+      }
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-2xl flex flex-col justify-between items-center select-none overflow-hidden font-sans">
+      {/* 🔮 Background Mesh Ambient Glow */}
+      <div className="absolute inset-0 bg-radial-gradient from-cyan-500/10 via-transparent to-transparent pointer-events-none blur-3xl opacity-50" />
+
+      {/* TOP BAR / DISMISS BUTTON */}
+      <div className="w-full pt-10 px-6 flex justify-between items-center z-10">
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
+          <span className="text-xs font-bold text-white/70 uppercase tracking-widest">
+            {callState === "active" ? "BUBU Secure Voice Channel" : "Calling BUBU..."}
+          </span>
+        </div>
+        <button
+          onClick={onExit}
+          className="p-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-white/70 hover:text-white transition cursor-pointer active:scale-95 shadow-md"
+          title="Exit Call"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* CYBERPUNK KEYPAD OVERLAY MODAL */}
+      <AnimatePresence>
+        {keypadOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="absolute inset-x-4 top-20 bottom-32 z-50 p-5 rounded-3xl bg-[#090d16]/98 border border-cyan-500/40 backdrop-blur-2xl shadow-[0_0_50px_rgba(6,182,212,0.3)] flex flex-col justify-between max-w-md mx-auto"
+          >
+            {/* Keypad Header Readout */}
+            <div className="flex flex-col items-center gap-1.5 border-b border-white/10 pb-3">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest flex items-center gap-1">
+                  <span>🔢</span> CYBER KEYPAD DIALER
+                </span>
+                <button
+                  onClick={() => setKeypadOpen(false)}
+                  className="p-1 text-xs text-white/50 hover:text-white cursor-pointer"
+                >
+                  ✕ Close
+                </button>
+              </div>
+              <div className="w-full bg-black/60 border border-cyan-500/30 rounded-xl p-2.5 flex flex-col items-center justify-center min-h-[52px]">
+                <span className="text-xl font-mono tracking-widest text-cyan-400 font-bold min-h-[28px]">
+                  {dialedDigits || "---"}
+                </span>
+                <span className="text-[10px] text-white/60 font-semibold truncate max-w-full">
+                  {activeActionLabel || "Tap keys for quick AI actions"}
+                </span>
+              </div>
+            </div>
+
+            {/* 3x4 Touch Grid */}
+            <div className="grid grid-cols-3 gap-3 my-auto py-2">
+              {["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"].map((key) => {
+                const action = keypadActions[key];
+                return (
+                  <button
+                    key={key}
+                    onClick={() => handleKeyPress(key)}
+                    className="p-3.5 rounded-2xl bg-white/5 hover:bg-cyan-500/20 active:bg-cyan-500/40 border border-white/10 hover:border-cyan-400/50 text-white flex flex-col items-center justify-center gap-0.5 transition-all duration-150 active:scale-95 cursor-pointer shadow-md group"
+                  >
+                    <span className="text-xl font-bold font-mono group-hover:text-cyan-300 transition-colors">
+                      {key}
+                    </span>
+                    <span className="text-[8px] text-white/40 group-hover:text-cyan-200/70 font-medium truncate max-w-full">
+                      {action?.label.split(" ")[0] || ""}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Keypad Footer Info */}
+            <div className="text-center text-[9px] text-white/30 font-mono border-t border-white/10 pt-2">
+              DTMF Tone Enabled • Instant Action Execution
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CENTER SECTION: ORB VISUALIZER */}
+      <div className="flex-1 flex flex-col items-center justify-center z-10 my-auto">
+        <NeuralOrb state={state} personality={personality} />
+      </div>
+
+      {/* SUBTITLE & STATUS READOUT */}
+      {showSubtitles && (
+        <div className="px-6 text-center z-10 max-w-lg min-h-[60px] flex flex-col justify-center items-center">
+          <p className="text-sm sm:text-base font-medium text-slate-200 leading-relaxed bg-black/40 px-4 py-2 rounded-2xl border border-white/10 backdrop-blur-md shadow-lg">
+            {state === "listening" && "Listening to you..."}
+            {state === "thinking" && "Processing..."}
+            {state === "speaking" && (subtitle || "Speaking...")}
+            {state === "idle" && (subtitle || "Say something...")}
+          </p>
+          {state === "speaking" && (
+            <span className="text-xs text-cyan-400/70 select-none animate-pulse font-normal tracking-wide mt-1">
+              (Tap screen to interrupt)
+            </span>
+          )}
         </div>
       )}
 
@@ -334,10 +509,23 @@ export default function VoiceMode({
               )}
             </button>
 
+            {/* 🔢 KEYPAD BUTTON */}
+            <button
+              onClick={() => setKeypadOpen(!keypadOpen)}
+              className={`p-4 rounded-full transition-all duration-300 shadow-md cursor-pointer ${
+                keypadOpen
+                  ? "bg-cyan-500 text-black border-cyan-400 scale-105 shadow-[0_0_20px_rgba(6,182,212,0.5)]"
+                  : "bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/50"
+              }`}
+              title="Toggle Keypad"
+            >
+              <span className="text-xl leading-none">🔢</span>
+            </button>
+
             {/* END CALL BUTTON */}
             <button
               onClick={onExit}
-              className="p-5 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30 hover:shadow-red-600/50 hover:scale-105 active:scale-95 transition-all duration-300"
+              className="p-5 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30 hover:shadow-red-600/50 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
               title="End Call"
             >
               <svg className="w-7 h-7 transform rotate-[135deg]" fill="currentColor" viewBox="0 0 24 24">
@@ -348,7 +536,7 @@ export default function VoiceMode({
             {/* MANUAL SPEAK / PUSH TO TALK */}
             <button
               onClick={onMicClick}
-              className={`p-4 rounded-full transition-all duration-300 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/50 ${
+              className={`p-4 rounded-full transition-all duration-300 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/50 cursor-pointer ${
                 state === "listening" && "animate-pulse border-cyan-500/50 text-cyan-400"
               }`}
               title="Force Speak"

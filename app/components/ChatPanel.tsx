@@ -106,6 +106,17 @@ export default function ChatPanel({
   style,
   className,
 }: ChatPanelProps & { widthClass?: string; style?: React.CSSProperties; className?: string }) {
+  const [showQuickKeypad, setShowQuickKeypad] = useState(false);
+
+  const quickPrompts = [
+    { label: "🎵 Sing Song", text: "Can you sing a short song for me?" },
+    { label: "🎭 Tell Joke", text: "Tell me a funny joke!" },
+    { label: "💖 Story", text: "Tell me a sweet romantic short story." },
+    { label: "⚡ Motivate", text: "Give me an inspiring motivational message!" },
+    { label: "🧠 Philosophy", text: "Share a deep thought or philosophical insight." },
+    { label: "✨ Compliment", text: "Give me a genuine heartwarming compliment!" },
+  ];
+
   return (
     <div
       className={`flex flex-col border flex-shrink-0 custom-glass-panel overflow-hidden max-w-full box-border ${
@@ -158,26 +169,18 @@ export default function ChatPanel({
                 key={i}
                 initial={{ opacity: 0, y: 18, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.96 }}
-                transition={{ type: "spring", stiffness: 280, damping: 22 }}
-                className={`flex gap-2.5 items-end ${
-                  isUser ? "flex-row-reverse justify-start" : "flex-row justify-start"
-                }`}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className={`flex gap-2.5 items-start ${isUser ? "justify-end" : "justify-start"}`}
               >
-                {/* Avatar Icon */}
-                {isUser ? (
-                  <div className="w-7 h-7 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-bold text-white/80 select-none shadow-md backdrop-blur-md flex-shrink-0">
-                    👤
-                  </div>
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-slate-900 border border-white/15 flex items-center justify-center text-xs select-none shadow-md backdrop-blur-md flex-shrink-0">
+                {!isUser && (
+                  <div className="w-7 h-7 rounded-full bg-slate-900 border border-white/15 flex items-center justify-center text-xs select-none shadow-md backdrop-blur-md flex-shrink-0 mt-0.5">
                     {currentMood.emoji}
                   </div>
                 )}
 
                 {/* Message Bubble Card */}
                 <div
-                  className={`px-4 py-2.5 rounded-2xl text-sm max-w-[75%] border backdrop-blur-md transition-all duration-300 hover:scale-[1.015] ${
+                  className={`px-4 py-2.5 rounded-2xl text-sm max-w-[80%] border backdrop-blur-md transition-all duration-300 hover:scale-[1.015] break-words ${
                     isUser ? currentMood.user : currentMood.ai
                   }`}
                 >
@@ -213,6 +216,31 @@ export default function ChatPanel({
         <div ref={chatEndRef} />
       </div>
 
+      {/* QUICK KEYPAD STRIP */}
+      <AnimatePresence>
+        {showQuickKeypad && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="px-3 py-2 border-t border-white/10 bg-[#090d16]/90 backdrop-blur-md flex gap-2 overflow-x-auto glass-scrollbar flex-shrink-0"
+          >
+            {quickPrompts.map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  setInputText(item.text);
+                  setShowQuickKeypad(false);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-cyan-500/20 hover:border-cyan-400/40 text-xs text-white/90 whitespace-nowrap transition-all duration-200 cursor-pointer active:scale-95 flex-shrink-0 shadow-sm"
+              >
+                {item.label}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* INPUT BAR */}
       <div
         className={`p-3 border-t border-white/10 flex gap-2 items-center w-full min-w-0 box-border overflow-hidden flex-shrink-0 ${
@@ -221,7 +249,7 @@ export default function ChatPanel({
             : ""
         }`}
       >
-        {/* Quick Launch Buttons (shown on all devices) */}
+        {/* Quick Launch Buttons */}
         <div className="flex gap-2 flex-shrink-0">
           {/* 📞 Call BUBU Button */}
           <button
@@ -237,6 +265,19 @@ export default function ChatPanel({
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
               <path d="M6.62 10.79c1.44 2.83 3.76 5.15 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
             </svg>
+          </button>
+
+          {/* ⌨️ Quick AI Keypad Toggle */}
+          <button
+            onClick={() => setShowQuickKeypad(!showQuickKeypad)}
+            className={`w-9 h-9 rounded-xl border text-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center shadow-md backdrop-blur-md flex-shrink-0 ${
+              showQuickKeypad
+                ? "bg-cyan-500 text-black border-cyan-400"
+                : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10"
+            }`}
+            title="Quick Action Keypad"
+          >
+            ⌨️
           </button>
         </div>
 
