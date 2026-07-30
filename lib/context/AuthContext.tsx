@@ -88,19 +88,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      typeof navigator !== "undefined" ? navigator.userAgent : ""
-    );
-
     try {
-      if (isMobile) {
-        await signInWithRedirect(auth, googleProvider);
-      } else {
-        await signInWithPopup(auth, googleProvider);
-      }
+      // 1. Try popup first (works smoothly on modern Android Chrome when triggered by user tap)
+      await signInWithPopup(auth, googleProvider);
     } catch (err: any) {
-      if (err?.code === "auth/popup-blocked" || err?.code === "auth/popup-closed-by-user" || isMobile) {
+      console.warn("Google popup login failed, attempting redirect fallback:", err);
+
+      // 2. If popup is blocked or unsupported on mobile browser, fallback to redirect
+      if (
+        err?.code === "auth/popup-blocked" ||
+        err?.code === "auth/popup-closed-by-user" ||
+        err?.code === "auth/operation-not-supported-in-this-environment"
+      ) {
         await signInWithRedirect(auth, googleProvider);
+      } else if (err?.code === "auth/unauthorized-domain") {
+        throw new Error("Domain not authorized! Please add your current domain/IP to Firebase Console -> Authentication -> Settings -> Authorized Domains.");
+      } else if (err?.code === "auth/operation-not-allowed") {
+        throw new Error("Google Sign-In is disabled! Please enable Google provider in Firebase Console -> Authentication -> Sign-in method.");
       } else {
         throw err;
       }

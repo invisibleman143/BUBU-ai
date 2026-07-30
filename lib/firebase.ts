@@ -24,5 +24,12 @@ const app = isFirebaseConfigured
 
 export const auth: Auth | null = app ? getAuth(app) : null;
 export const db: Firestore | null = app ? getFirestore(app) : null;
-export const googleProvider: GoogleAuthProvider | null = app ? new GoogleAuthProvider() : null;
+export const googleProvider: GoogleAuthProvider | null = app
+  ? (() => {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      return provider;
+    })()
+  : null;
+
 
