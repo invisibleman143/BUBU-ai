@@ -75,7 +75,7 @@ export default function Header({
 
   return (
     <header
-      className={`flex items-center justify-between px-3 sm:px-6 border transition-colors duration-500 z-30 custom-glass-panel min-w-0 overflow-hidden box-border max-w-full ${className || "h-16 flex-shrink-0 border-b"}`}
+      className={`flex items-center justify-between px-3 sm:px-6 border transition-colors duration-500 z-30 custom-glass-panel min-w-0 box-border max-w-full ${className || "h-16 flex-shrink-0 border-b"}`}
       style={{
         borderBottomColor: isDark
           ? `rgba(var(--accent-${currentStyles.accent}), 0.15)`
@@ -142,7 +142,7 @@ export default function Header({
         </div>
 
         {/* 👤 PROFILE DROPDOWN */}
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative z-[999]" ref={dropdownRef}>
           <button
             onClick={() => setProfileOpen(!profileOpen)}
             className="w-9 h-9 rounded-full bg-white/5 border border-white/10 hover:border-cyan-400/40 hover:bg-white/10 flex items-center justify-center text-sm font-semibold transition-all duration-300 cursor-pointer active:scale-95 shadow-md"
@@ -163,7 +163,7 @@ export default function Header({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className="absolute right-0 mt-2 w-64 p-4 rounded-2xl border border-white/10 bg-[#090d16]/98 backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50 text-white flex flex-col gap-3.5"
+                className="absolute right-0 mt-2 w-64 p-4 rounded-2xl border border-white/10 bg-[#090d16]/98 backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.8)] z-[999] text-white flex flex-col gap-3.5 pointer-events-auto"
               >
                 {/* Account Profile Header */}
                 <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/5">
