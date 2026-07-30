@@ -1422,13 +1422,9 @@ export default function Page() {
 
   return (
     <div
-      className={`flex flex-col transition-colors duration-500 overflow-hidden relative ${
+      className={`fixed inset-0 w-full h-[100dvh] flex flex-col transition-colors duration-500 overflow-hidden select-none ${
         isDark ? "bg-[#020617] text-white" : "bg-[#f8fafc] text-gray-900"
       }`}
-      style={{
-        height: "var(--visual-viewport-height, 100dvh)",
-        transform: "translateY(var(--visual-viewport-offsetTop, 0px))",
-      }}
     >
       {/* 🎨 DYNAMIC UI STYLING OVERRIDES */}
       <style dangerouslySetInnerHTML={{ __html: `
