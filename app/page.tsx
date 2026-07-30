@@ -2053,7 +2053,11 @@ export default function Page() {
 
                         {/* Contextual control panel inside overlay */}
                         <div 
-                          className="mt-2 bg-[#090d16]/95 border border-cyan-500/40 p-2 rounded-2xl flex flex-wrap items-center justify-center gap-2 w-full max-w-full opacity-100 sm:opacity-75 sm:group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto shadow-lg backdrop-blur-md overflow-hidden box-border"
+                          className={`bg-[#090d16]/95 border border-cyan-500/40 p-2 rounded-2xl flex flex-wrap items-center justify-center gap-2 opacity-100 sm:opacity-75 sm:group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto shadow-lg backdrop-blur-md box-border ${
+                            widget === "header"
+                              ? "absolute top-full mt-2 left-1/2 -translate-x-1/2 z-[100] w-max max-w-[95vw]"
+                              : "mt-2 w-full max-w-full overflow-hidden"
+                          }`}
                           onMouseDown={(e) => e.stopPropagation()} // Prevent drag on controls
                           onTouchStart={(e) => e.stopPropagation()}
                         >

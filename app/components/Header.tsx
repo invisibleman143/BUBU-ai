@@ -75,7 +75,7 @@ export default function Header({
 
   return (
     <header
-      className={`flex items-center justify-between px-6 border transition-colors duration-500 z-30 custom-glass-panel ${className || "h-16 flex-shrink-0 border-b"}`}
+      className={`flex items-center justify-between px-3 sm:px-6 border transition-colors duration-500 z-30 custom-glass-panel min-w-0 overflow-hidden box-border max-w-full ${className || "h-16 flex-shrink-0 border-b"}`}
       style={{
         borderBottomColor: isDark
           ? `rgba(var(--accent-${currentStyles.accent}), 0.15)`
