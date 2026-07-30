@@ -2053,7 +2053,7 @@ export default function Page() {
 
                         {/* Contextual control panel inside overlay */}
                         <div 
-                          className="mt-2 bg-[#090d16]/95 border border-cyan-500/30 p-1.5 rounded-xl flex items-center justify-center gap-3 opacity-60 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto shadow-md"
+                          className="mt-2 bg-[#090d16]/95 border border-cyan-500/40 p-2 rounded-2xl flex flex-wrap items-center justify-center gap-2 w-full max-w-full opacity-100 sm:opacity-75 sm:group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto shadow-lg backdrop-blur-md overflow-hidden box-border"
                           onMouseDown={(e) => e.stopPropagation()} // Prevent drag on controls
                           onTouchStart={(e) => e.stopPropagation()}
                         >
@@ -2061,91 +2061,90 @@ export default function Page() {
                             onClick={() => {
                               setUnlockedWidgets((prev) => ({ ...prev, [widget]: false }));
                             }}
-                            className="p-1 rounded bg-cyan-500/20 hover:bg-cyan-500/40 text-[9px] font-bold text-cyan-400 cursor-pointer transition-all active:scale-95 flex items-center justify-center"
+                            className="p-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/40 text-xs font-bold text-cyan-400 cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-1 border border-cyan-500/30"
                             title="Lock Layout (🔒)"
                           >
-                            🔒
+                            <span>🔒</span>
+                            <span className="text-[9px] uppercase tracking-wider hidden sm:inline">Lock</span>
                           </button>
 
-                          <div className="w-[1px] h-3 bg-white/10" />
+                          <div className="w-[1px] h-4 bg-white/10 hidden sm:block" />
 
-                          <div className="flex items-center gap-1">
-                            <span className="text-[9px] text-white/50 cursor-default" title="Scale Layout">🔎</span>
+                          {/* Scale */}
+                          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/5">
+                            <span className="text-[10px] text-white/60 cursor-default px-0.5" title="Scale Layout">🔎</span>
                             <button
-                              onClick={() => updateWidgetConfig(widget, { scale: Math.max(0.5, cfg.scale - 0.05) })}
-                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
+                              onClick={() => updateWidgetConfig(widget, { scale: Math.max(0.5, Number((cfg.scale - 0.05).toFixed(2))) })}
+                              className="w-6 h-6 rounded-md bg-white/10 border border-white/15 hover:bg-white/20 active:bg-white/30 text-xs font-bold flex items-center justify-center text-white cursor-pointer transition-all active:scale-95"
                             >
                               -
                             </button>
-                            <span className="text-[8px] font-mono font-bold text-cyan-400 w-7 text-center">
+                            <span className="text-[9px] font-mono font-bold text-cyan-400 min-w-[32px] text-center">
                               {Math.round(cfg.scale * 100)}%
                             </span>
                             <button
-                              onClick={() => updateWidgetConfig(widget, { scale: Math.min(1.5, cfg.scale + 0.05) })}
-                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
+                              onClick={() => updateWidgetConfig(widget, { scale: Math.min(1.5, Number((cfg.scale + 0.05).toFixed(2))) })}
+                              className="w-6 h-6 rounded-md bg-white/10 border border-white/15 hover:bg-white/20 active:bg-white/30 text-xs font-bold flex items-center justify-center text-white cursor-pointer transition-all active:scale-95"
                             >
                               +
                             </button>
                           </div>
 
-                          <div className="w-[1px] h-3 bg-white/10" />
-
-                          <div className="flex items-center gap-1">
-                            <span className="text-[9px] text-white/50 cursor-default" title="Adjust Width">↔️</span>
+                          {/* Width */}
+                          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/5">
+                            <span className="text-[10px] text-white/60 cursor-default px-0.5" title="Adjust Width">↔️</span>
                             <button
                               onClick={() => updateWidgetConfig(widget, { w: Math.max(5, cfg.w - 2) })}
-                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
+                              className="w-6 h-6 rounded-md bg-white/10 border border-white/15 hover:bg-white/20 active:bg-white/30 text-xs font-bold flex items-center justify-center text-white cursor-pointer transition-all active:scale-95"
                             >
                               -
                             </button>
-                            <span className="text-[8px] font-mono font-bold text-cyan-400 w-7 text-center">
+                            <span className="text-[9px] font-mono font-bold text-cyan-400 min-w-[32px] text-center">
                               {cfg.w}%
                             </span>
                             <button
                               onClick={() => updateWidgetConfig(widget, { w: Math.min(100, cfg.w + 2) })}
-                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
+                              className="w-6 h-6 rounded-md bg-white/10 border border-white/15 hover:bg-white/20 active:bg-white/30 text-xs font-bold flex items-center justify-center text-white cursor-pointer transition-all active:scale-95"
                             >
                               +
                             </button>
                           </div>
 
-                          <div className="w-[1px] h-3 bg-white/10" />
-
-                          <div className="flex items-center gap-1">
-                            <span className="text-[9px] text-white/50 cursor-default" title="Adjust Height">↕️</span>
+                          {/* Height */}
+                          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/5">
+                            <span className="text-[10px] text-white/60 cursor-default px-0.5" title="Adjust Height">↕️</span>
                             <button
                               onClick={() => updateWidgetConfig(widget, { h: Math.max(5, cfg.h - 2) })}
-                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
+                              className="w-6 h-6 rounded-md bg-white/10 border border-white/15 hover:bg-white/20 active:bg-white/30 text-xs font-bold flex items-center justify-center text-white cursor-pointer transition-all active:scale-95"
                             >
                               -
                             </button>
-                            <span className="text-[8px] font-mono font-bold text-cyan-400 w-7 text-center">
+                            <span className="text-[9px] font-mono font-bold text-cyan-400 min-w-[32px] text-center">
                               {cfg.h}%
                             </span>
                             <button
                               onClick={() => updateWidgetConfig(widget, { h: Math.min(100, cfg.h + 2) })}
-                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
+                              className="w-6 h-6 rounded-md bg-white/10 border border-white/15 hover:bg-white/20 active:bg-white/30 text-xs font-bold flex items-center justify-center text-white cursor-pointer transition-all active:scale-95"
                             >
                               +
                             </button>
                           </div>
 
-                          <div className="w-[1px] h-3 bg-white/10" />
-
-                          <div className="flex items-center gap-1">
-                            <span className="text-[9px] text-white/50 cursor-default" title="Adjust Opacity">🌓</span>
+                          {/* Opacity */}
+                          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/5">
+                            <span className="text-[10px] text-white/60 cursor-default px-0.5" title="Adjust Opacity">🌓</span>
                             <button
-                              onClick={() => updateWidgetConfig(widget, { opacity: Math.max(0.1, cfg.opacity - 0.1) })}
-                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
+                              onClick={() => updateWidgetConfig(widget, { opacity: Math.max(0.1, Number((cfg.opacity - 0.1).toFixed(1))) })}
+                              className="w-6 h-6 rounded-md bg-white/10 border border-white/15 hover:bg-white/20 active:bg-white/30 text-xs font-bold flex items-center justify-center text-white cursor-pointer transition-all active:scale-95"
                             >
                               -
                             </button>
-                            <span className="text-[8px] font-mono font-bold text-cyan-400 w-7 text-center">
+                            <span className="text-[9px] font-mono font-bold text-cyan-400 min-w-[32px] text-center">
                               {Math.round(cfg.opacity * 100)}%
                             </span>
                             <button
-                              onClick={() => updateWidgetConfig(widget, { opacity: Math.min(1.0, cfg.opacity + 0.1) })}
-                              className="w-4 h-4 rounded bg-white/5 border border-white/10 hover:bg-white/15 text-[10px] font-bold flex items-center justify-center text-white cursor-pointer transition-all"
+                              onClick={() => updateWidgetConfig(widget, { opacity: Math.min(1.0, Number((cfg.opacity + 0.1).toFixed(1))) })}
+                              className="w-6 h-6 rounded-md bg-white/10 border border-white/15 hover:bg-white/20 active:bg-white/30 text-xs font-bold flex items-center justify-center text-white cursor-pointer transition-all active:scale-95"
                             >
                               +
                             </button>
@@ -2159,9 +2158,9 @@ export default function Page() {
                           {widget === "todoToggle" ? "📋" : widget === "songsToggle" ? "🎧" : "🧠"}
                         </span>
                         
-                        {/* Hover micro controls for buttons (Hide / Scale / Lock) */}
+                        {/* Micro controls for buttons (Hide / Scale / Lock) */}
                         <div 
-                          className="absolute -bottom-7 bg-[#090d16]/95 border border-cyan-500/30 py-0.5 px-1.5 rounded-md flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto shadow-md"
+                          className="absolute top-full mt-1 left-1/2 -translate-x-1/2 bg-[#090d16]/95 border border-cyan-500/40 p-1.5 rounded-xl flex items-center gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto shadow-lg z-[100] whitespace-nowrap"
                           onMouseDown={(e) => e.stopPropagation()} 
                           onTouchStart={(e) => e.stopPropagation()}
                         >
@@ -2169,69 +2168,33 @@ export default function Page() {
                             onClick={() => {
                               setUnlockedWidgets((prev) => ({ ...prev, [widget]: false }));
                             }}
-                            className="w-3.5 h-3.5 rounded bg-cyan-500/20 text-[7px] flex items-center justify-center text-cyan-400 hover:bg-cyan-500/35 cursor-pointer font-bold"
+                            className="w-5 h-5 rounded-md bg-cyan-500/20 text-[9px] flex items-center justify-center text-cyan-400 hover:bg-cyan-500/35 cursor-pointer font-bold border border-cyan-500/30 active:scale-95"
                             title="Lock Position"
                           >
                             🔒
                           </button>
-                          <div className="w-[1px] h-2 bg-white/15" />
+                          <div className="w-[1px] h-3 bg-white/15" />
                           <button
-                            onClick={() => updateWidgetConfig(widget, { scale: Math.max(0.6, cfg.scale - 0.1) })}
-                            className="w-3.5 h-3.5 rounded bg-white/5 text-[8px] font-bold flex items-center justify-center text-white hover:bg-white/10 cursor-pointer"
+                            onClick={() => updateWidgetConfig(widget, { scale: Math.max(0.6, Number((cfg.scale - 0.1).toFixed(1))) })}
+                            className="w-5 h-5 rounded-md bg-white/10 text-[10px] font-bold flex items-center justify-center text-white hover:bg-white/20 cursor-pointer active:scale-95"
                             title="Decrease Scale"
                           >
                             -
                           </button>
-                          <span className="text-[7px] text-cyan-400 font-mono font-bold">
+                          <span className="text-[8px] text-cyan-400 font-mono font-bold px-0.5">
                             {Math.round(cfg.scale * 100)}%
                           </span>
                           <button
-                            onClick={() => updateWidgetConfig(widget, { scale: Math.min(1.4, cfg.scale + 0.1) })}
-                            className="w-3.5 h-3.5 rounded bg-white/5 text-[8px] font-bold flex items-center justify-center text-white hover:bg-white/10 cursor-pointer"
+                            onClick={() => updateWidgetConfig(widget, { scale: Math.min(1.4, Number((cfg.scale + 0.1).toFixed(1))) })}
+                            className="w-5 h-5 rounded-md bg-white/10 text-[10px] font-bold flex items-center justify-center text-white hover:bg-white/20 cursor-pointer active:scale-95"
                             title="Increase Scale"
                           >
                             +
                           </button>
-                          <div className="w-[1px] h-2 bg-white/15" />
-                          <button
-                            onClick={() => updateWidgetConfig(widget, { w: Math.max(1, cfg.w - 1) })}
-                            className="w-3.5 h-3.5 rounded bg-white/5 text-[8px] font-bold flex items-center justify-center text-white hover:bg-white/10 cursor-pointer"
-                            title="Decrease Width"
-                          >
-                            w-
-                          </button>
-                          <span className="text-[7px] text-cyan-400 font-mono font-bold">
-                            {cfg.w}%
-                          </span>
-                          <button
-                            onClick={() => updateWidgetConfig(widget, { w: Math.min(30, cfg.w + 1) })}
-                            className="w-3.5 h-3.5 rounded bg-white/5 text-[8px] font-bold flex items-center justify-center text-white hover:bg-white/10 cursor-pointer"
-                            title="Increase Width"
-                          >
-                            w+
-                          </button>
-                          <div className="w-[1px] h-2 bg-white/15" />
-                          <button
-                            onClick={() => updateWidgetConfig(widget, { h: Math.max(1, cfg.h - 1) })}
-                            className="w-3.5 h-3.5 rounded bg-white/5 text-[8px] font-bold flex items-center justify-center text-white hover:bg-white/10 cursor-pointer"
-                            title="Decrease Height"
-                          >
-                            h-
-                          </button>
-                          <span className="text-[7px] text-cyan-400 font-mono font-bold">
-                            {cfg.h}%
-                          </span>
-                          <button
-                            onClick={() => updateWidgetConfig(widget, { h: Math.min(30, cfg.h + 1) })}
-                            className="w-3.5 h-3.5 rounded bg-white/5 text-[8px] font-bold flex items-center justify-center text-white hover:bg-white/10 cursor-pointer"
-                            title="Increase Height"
-                          >
-                            h+
-                          </button>
-                          <div className="w-[1px] h-2 bg-white/15" />
+                          <div className="w-[1px] h-3 bg-white/15" />
                           <button
                             onClick={() => updateWidgetConfig(widget, { visible: false })}
-                            className="w-3.5 h-3.5 rounded bg-red-500/20 text-[7px] flex items-center justify-center text-red-400 hover:bg-red-500/30 cursor-pointer"
+                            className="w-5 h-5 rounded-md bg-red-500/20 text-[9px] flex items-center justify-center text-red-400 hover:bg-red-500/30 cursor-pointer font-bold border border-red-500/30 active:scale-95"
                             title="Hide Button"
                           >
                             ✕
